@@ -8,6 +8,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Live LCRA data** — `LakeDataService` actor fetches daily readings from `waterdatafortexas.org` CSV on app launch. Current Level and Capacity in the stat grid now show real values; the 2026 chart line is built from actual monthly averages via Catmull-Rom spline (falls back to placeholder while loading).
+- **`WaterLevel.entitlements`** — `com.apple.security.network.client` entitlement added so the sandboxed app can make outbound HTTPS requests.
+- **Header sync label** — shows "FETCHING DATA…" during load then "SYNCED JUST NOW / Xm AGO" from `AppState.lastUpdated`.
+
+### Fixed
+- Date parsing timezone bug: CSV date strings ("2026-01-01") were parsed as midnight UTC then queried in local time (UTC−6 Austin), shifting year/month by up to a day. Fixed by extracting `year` and `month` integers directly from the date string, stored on `DailyReading`.
+
+---
+
+## [Previous Unreleased]
+
+### Added
 - **5-year Jan–Dec overlay chart** — 2022–2026 year lines plotted on a shared Jan–Dec axis, replacing the single trailing-12-month line and range picker. Each year is a distinct neutral tone; 2026 (current year) renders in `Theme.water` blue and ends at the current month with a filled dot.
 - **Year toggle buttons in legend** — single-tap hides/shows a year; double-tap isolates that year (hides all others). Double-tapping an already-isolated year restores all lines.
 - **Multi-year crosshair tooltip** — hover shows an interpolated level (ft) for every visible year at the cursor position, with a color swatch per row. Tooltip flips left when near the right edge.

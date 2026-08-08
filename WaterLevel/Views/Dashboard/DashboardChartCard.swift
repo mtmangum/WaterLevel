@@ -3,7 +3,8 @@
 //  WaterLevel
 //
 //  Jan–Dec overlay chart showing 2022–2026 as individually toggleable year lines.
-//  2026 is the current year (accent, partial line, endpoint dot).
+//  2026 uses live daily readings (monthly averages → Catmull-Rom bezier).
+//  2022–2025 use static representative curves.
 //
 
 import SwiftUI
@@ -20,20 +21,9 @@ private struct YearSeries: Identifiable {
     let dotPosition: CGPoint?
 }
 
-// MARK: - Chart data
+// MARK: - Static chart data (2022–2025)
 
-private let yearSeries: [YearSeries] = [
-    YearSeries(
-        year: "2026",
-        color: Theme.water,
-        start: CGPoint(x: 40, y: 146),
-        curves: [
-            CubicSegment(c1: CGPoint(x: 100, y: 150), c2: CGPoint(x: 200, y: 152), end: CGPoint(x: 300, y: 120)),
-            CubicSegment(c1: CGPoint(x: 400, y: 84),  c2: CGPoint(x: 490, y: 105), end: CGPoint(x: 560, y: 118)),
-        ],
-        end: CGPoint(x: 560, y: 118),
-        dotPosition: CGPoint(x: 560, y: 118)
-    ),
+private let staticYearSeries: [YearSeries] = [
     YearSeries(
         year: "2025",
         color: Theme.neutral500,
@@ -84,6 +74,19 @@ private let yearSeries: [YearSeries] = [
     ),
 ]
 
+// Placeholder shown while live data loads
+private let placeholder2026 = YearSeries(
+    year: "2026",
+    color: Theme.water,
+    start: CGPoint(x: 40, y: 146),
+    curves: [
+        CubicSegment(c1: CGPoint(x: 100, y: 150), c2: CGPoint(x: 200, y: 152), end: CGPoint(x: 300, y: 120)),
+        CubicSegment(c1: CGPoint(x: 400, y: 84),  c2: CGPoint(x: 490, y: 105), end: CGPoint(x: 560, y: 118)),
+    ],
+    end: CGPoint(x: 560, y: 118),
+    dotPosition: CGPoint(x: 560, y: 118)
+)
+
 private let chartAvgStart = CGPoint(x: 40, y: 120)
 private let chartAvgCurves: [CubicSegment] = [
     CubicSegment(c1: CGPoint(x: 100, y: 116), c2: CGPoint(x: 200, y: 112), end: CGPoint(x: 300, y: 100)),
@@ -96,8 +99,17 @@ private let monthXLabels: [(x: CGFloat, text: String)] = [
     (0, "JAN"), (160, "MAR"), (320, "MAY"), (480, "JUL"), (640, "SEP"), (800, "NOV"), (940, "DEC"),
 ]
 
+// SVG y ↔ feet conversions (681 ft = y=34, 605 ft = y=226)
 private func svgYToFt(_ svgY: CGFloat) -> CGFloat {
     min(max(681.0 - (svgY - 34.0) * (76.0 / 192.0), 605), 681)
+}
+private func ftToSvgY(_ ft: Double) -> CGFloat {
+    34.0 + CGFloat(681.0 - ft) * (192.0 / 76.0)
+}
+
+// Month index (1–12) to SVG x at month center
+private func monthToSvgX(_ month: Int) -> CGFloat {
+    (CGFloat(month) - 0.5) * 80
 }
 
 private let kAvg = "30-YR AVG"
@@ -106,9 +118,19 @@ private let kAvg = "30-YR AVG"
 
 struct DashboardChartCard: View {
     let theme: Theme
+    @EnvironmentObject var appState: AppState
 
     @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
+
+    // All year series: live 2026 (or placeholder) + static 2022–2025
+    private var allSeries: [YearSeries] {
+        [live2026] + staticYearSeries
+    }
+
+    private var allSeriesIDs: [String] {
+        allSeries.map(\.year) + [kAvg]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -130,7 +152,7 @@ struct DashboardChartCard: View {
                             .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
                     }
 
-                    ForEach(Array(yearSeries.reversed()), id: \.year) { series in
+                    ForEach(Array(allSeries.reversed()), id: \.year) { series in
                         if !hiddenSeries.contains(series.year) {
                             svgPath(start: series.start, curves: series.curves, lineTo: series.end, size: size)
                                 .stroke(series.color, style: StrokeStyle(
@@ -175,11 +197,56 @@ struct DashboardChartCard: View {
         .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 2))
     }
 
+    // MARK: - Live 2026 series
+
+    // Builds a YearSeries from real monthly-average readings.
+    // Falls back to the static placeholder when data isn't loaded yet.
+    private var live2026: YearSeries {
+        let readings2026 = appState.readings.filter { $0.year == 2026 }
+        guard readings2026.count >= 2 else { return placeholder2026 }
+
+        // Monthly averages (only months that have data)
+        var monthAvgs: [(month: Int, level: Double)] = []
+        for month in 1...12 {
+            let monthly = readings2026.filter { $0.month == month }
+            guard !monthly.isEmpty else { continue }
+            let avg = monthly.map(\.waterLevel).reduce(0, +) / Double(monthly.count)
+            monthAvgs.append((month: month, level: avg))
+        }
+        guard monthAvgs.count >= 2 else { return placeholder2026 }
+
+        // Convert to SVG points
+        let pts = monthAvgs.map { ma in
+            CGPoint(x: monthToSvgX(ma.month), y: ftToSvgY(ma.level))
+        }
+
+        // Catmull-Rom → cubic bezier for smooth interpolation
+        var segments: [CubicSegment] = []
+        for i in 0..<pts.count - 1 {
+            let p0 = pts[max(0, i - 1)]
+            let p1 = pts[i]
+            let p2 = pts[i + 1]
+            let p3 = pts[min(pts.count - 1, i + 2)]
+            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            segments.append(CubicSegment(c1: c1, c2: c2, end: p2))
+        }
+
+        return YearSeries(
+            year: "2026",
+            color: Theme.water,
+            start: pts[0],
+            curves: segments,
+            end: pts.last!,
+            dotPosition: pts.last
+        )
+    }
+
     // MARK: - Legend
 
     private var legend: some View {
         HStack(spacing: 8) {
-            ForEach(yearSeries) { series in
+            ForEach(allSeries) { series in
                 legendToggle(id: series.year, color: series.color, dashed: false, label: series.year)
             }
             legendToggle(id: kAvg, color: theme.chartAvgLine, dashed: true, label: "30-YR AVG")
@@ -190,7 +257,6 @@ struct DashboardChartCard: View {
 
     private func legendToggle(id: String, color: Color, dashed: Bool, label: String) -> some View {
         let hidden = hiddenSeries.contains(id)
-        let allIDs = yearSeries.map(\.year) + [kAvg]
         return HStack(spacing: 5) {
             Path { p in
                 p.move(to: CGPoint(x: 0, y: 1.25))
@@ -204,8 +270,9 @@ struct DashboardChartCard: View {
         .opacity(hidden ? 0.35 : 1)
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
-            let isIsolated = !hiddenSeries.contains(id) && allIDs.filter { $0 != id }.allSatisfy { hiddenSeries.contains($0) }
-            hiddenSeries = isIsolated ? [] : Set(allIDs.filter { $0 != id })
+            let ids = allSeriesIDs
+            let isIsolated = !hiddenSeries.contains(id) && ids.filter { $0 != id }.allSatisfy { hiddenSeries.contains($0) }
+            hiddenSeries = isIsolated ? [] : Set(ids.filter { $0 != id })
         }
         .onTapGesture(count: 1) {
             if hidden { hiddenSeries.remove(id) } else { hiddenSeries.insert(id) }
@@ -225,7 +292,7 @@ struct DashboardChartCard: View {
         }
         .stroke(Theme.water.opacity(0.45), lineWidth: 1)
 
-        ForEach(Array(yearSeries.reversed()), id: \.year) { series in
+        ForEach(Array(allSeries.reversed()), id: \.year) { series in
             yearDot(series: series, svgX: svgX, hx: hx, size: size)
         }
 
@@ -246,7 +313,7 @@ struct DashboardChartCard: View {
 
     @ViewBuilder
     private func crosshairTooltip(svgX: CGFloat, hx: CGFloat, size: CGSize, flipLeft: Bool) -> some View {
-        let visible = yearSeries.filter { !hiddenSeries.contains($0.year) && levelY(for: $0, atSvgX: svgX) != nil }
+        let visible = allSeries.filter { !hiddenSeries.contains($0.year) && levelY(for: $0, atSvgX: svgX) != nil }
         if !visible.isEmpty {
             VStack(alignment: .leading, spacing: 5) {
                 Text(dateLabel(atSvgX: svgX))

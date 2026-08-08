@@ -20,11 +20,21 @@ struct ContentView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 20)
         }
+        .environmentObject(state)
         .background(theme.background)
         .foregroundStyle(theme.text)
         .frame(minWidth: 860, minHeight: 640)
         .background(WindowConfigurator())
         .preferredColorScheme(state.isDark ? .dark : .light)
+        .task { await state.fetchData() }
+    }
+
+    private var syncLabel: String {
+        guard let date = state.lastUpdated else { return "LIVE" }
+        let secs = Int(-date.timeIntervalSinceNow)
+        if secs < 60  { return "LIVE · SYNCED JUST NOW" }
+        if secs < 3600 { return "LIVE · SYNCED \(secs / 60)M AGO" }
+        return "LIVE · SYNCED \(secs / 3600)H AGO"
     }
 
     private var header: some View {
@@ -41,11 +51,11 @@ struct ContentView: View {
                         .foregroundStyle(theme.textMuted(0.25))
                     HStack(spacing: 5) {
                         Rectangle()
-                            .fill(theme.accent)
+                            .fill(state.isLoadingData ? theme.textMuted(0.4) : theme.accent)
                             .frame(width: 5, height: 5)
-                        Text("LIVE · SYNCED 2 MIN AGO")
+                        Text(state.isLoadingData ? "FETCHING DATA…" : syncLabel)
                             .font(AppFont.body(10.5, weight: .bold))
-                            .foregroundStyle(theme.accent)
+                            .foregroundStyle(state.isLoadingData ? theme.textMuted(0.4) : theme.accent)
                     }
                 }
             }

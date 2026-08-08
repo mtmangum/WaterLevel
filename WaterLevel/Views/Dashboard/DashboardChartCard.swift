@@ -5,6 +5,7 @@
 //  Jan–Dec overlay chart showing 2022–2026 as individually toggleable year lines.
 //  2026 uses live daily readings (monthly averages → Catmull-Rom bezier).
 //  2022–2025 use static representative curves.
+//  Drag horizontally to zoom into a time range; RESET to restore full view.
 //
 
 import SwiftUI
@@ -74,7 +75,6 @@ private let staticYearSeries: [YearSeries] = [
     ),
 ]
 
-// Placeholder shown while live data loads
 private let placeholder2026 = YearSeries(
     year: "2026",
     color: Theme.water,
@@ -95,19 +95,19 @@ private let chartAvgCurves: [CubicSegment] = [
 ]
 private let chartAvgEnd = CGPoint(x: 1000, y: 142)
 
-private let monthXLabels: [(x: CGFloat, text: String)] = [
-    (0, "JAN"), (160, "MAR"), (320, "MAY"), (480, "JUL"), (640, "SEP"), (800, "NOV"), (940, "DEC"),
+// All 12 month label positions (start of each month zone)
+private let allMonthLabels: [(x: CGFloat, label: String)] = [
+    (0, "JAN"), (80, "FEB"), (160, "MAR"), (240, "APR"),
+    (320, "MAY"), (400, "JUN"), (480, "JUL"), (560, "AUG"),
+    (640, "SEP"), (720, "OCT"), (800, "NOV"), (880, "DEC"),
 ]
 
-// SVG y ↔ feet conversions (681 ft = y=34, 605 ft = y=226)
 private func svgYToFt(_ svgY: CGFloat) -> CGFloat {
     min(max(681.0 - (svgY - 34.0) * (76.0 / 192.0), 605), 681)
 }
 private func ftToSvgY(_ ft: Double) -> CGFloat {
     34.0 + CGFloat(681.0 - ft) * (192.0 / 76.0)
 }
-
-// Month index (1–12) to SVG x at month center
 private func monthToSvgX(_ month: Int) -> CGFloat {
     (CGFloat(month) - 0.5) * 80
 }
@@ -123,21 +123,38 @@ struct DashboardChartCard: View {
     @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
 
-    // All year series: live 2026 (or placeholder) + static 2022–2025
-    private var allSeries: [YearSeries] {
-        [live2026] + staticYearSeries
-    }
+    // Zoom state
+    @State private var zoomRange: ClosedRange<CGFloat> = 0...1000
+    @State private var selectionStart: CGFloat? = nil
+    @State private var selectionEnd: CGFloat? = nil
 
-    private var allSeriesIDs: [String] {
-        allSeries.map(\.year) + [kAvg]
-    }
+    private var isZoomed: Bool { zoomRange.lowerBound > 1 || zoomRange.upperBound < 999 }
+
+    private var allSeries: [YearSeries] { [live2026] + staticYearSeries }
+    private var allSeriesIDs: [String] { allSeries.map(\.year) + [kAvg] }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(alignment: .center, spacing: 10) {
                 Text("WATER LEVEL — 5-YEAR COMPARISON")
                     .font(AppFont.body(14.5, weight: .heavy))
                     .tracking(0.2)
+
+                if isZoomed {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { zoomRange = 0...1000 }
+                    } label: {
+                        Text("RESET")
+                            .font(AppFont.body(10, weight: .bold))
+                            .tracking(0.4)
+                            .foregroundStyle(Theme.water)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .overlay(Rectangle().strokeBorder(Theme.water.opacity(0.5), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Spacer()
                 legend
             }
@@ -148,39 +165,68 @@ struct DashboardChartCard: View {
                     gridlines(size: size)
 
                     if !hiddenSeries.contains(kAvg) {
-                        svgPath(start: chartAvgStart, curves: chartAvgCurves, lineTo: chartAvgEnd, size: size)
+                        svgPath(start: chartAvgStart, curves: chartAvgCurves, lineTo: chartAvgEnd,
+                                size: size, xRange: zoomRange)
                             .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
                     }
 
                     ForEach(Array(allSeries.reversed()), id: \.year) { series in
                         if !hiddenSeries.contains(series.year) {
-                            svgPath(start: series.start, curves: series.curves, lineTo: series.end, size: size)
+                            svgPath(start: series.start, curves: series.curves, lineTo: series.end,
+                                    size: size, xRange: zoomRange)
                                 .stroke(series.color, style: StrokeStyle(
                                     lineWidth: series.year == "2026" ? 2.5 : 1.5,
                                     lineCap: .round
                                 ))
 
                             if let dot = series.dotPosition {
-                                Circle()
-                                    .fill(series.color)
-                                    .frame(width: 9, height: 9)
-                                    .position(scaledPoint(dot, size: size))
+                                let dotPt = scaledPoint(dot, size: size, xRange: zoomRange)
+                                if dotPt.x >= 0 && dotPt.x <= size.width {
+                                    Circle()
+                                        .fill(series.color)
+                                        .frame(width: 9, height: 9)
+                                        .position(dotPt)
+                                }
                             }
                         }
                     }
 
-                    ForEach(Array(monthXLabels.enumerated()), id: \.offset) { _, label in
-                        let pt = scaledPoint(CGPoint(x: label.x, y: 238), size: size)
-                        Text(label.text)
-                            .font(AppFont.body(11))
-                            .foregroundStyle(theme.textMuted(0.55))
-                            .position(x: pt.x + 12, y: pt.y)
+                    // Month labels — show all that fall within the visible range
+                    ForEach(Array(allMonthLabels.enumerated()), id: \.offset) { _, lbl in
+                        if lbl.x < zoomRange.upperBound && (lbl.x + 80) > zoomRange.lowerBound {
+                            let pt = scaledPoint(CGPoint(x: lbl.x, y: 238), size: size, xRange: zoomRange)
+                            Text(lbl.label)
+                                .font(AppFont.body(11))
+                                .foregroundStyle(theme.textMuted(0.55))
+                                .position(x: pt.x + 12, y: pt.y)
+                        }
                     }
 
-                    if let hx = hoverX {
+                    // Selection highlight during drag
+                    if let s = selectionStart, let e = selectionEnd {
+                        let lo = min(s, e)
+                        let hi = max(s, e)
+                        Rectangle()
+                            .fill(Theme.water.opacity(0.1))
+                            .frame(width: hi - lo, height: size.height)
+                            .position(x: (lo + hi) / 2, y: size.height / 2)
+                        Path { p in
+                            p.move(to: CGPoint(x: lo, y: 0))
+                            p.addLine(to: CGPoint(x: lo, y: size.height))
+                        }
+                        .stroke(Theme.water.opacity(0.7), lineWidth: 1)
+                        Path { p in
+                            p.move(to: CGPoint(x: hi, y: 0))
+                            p.addLine(to: CGPoint(x: hi, y: size.height))
+                        }
+                        .stroke(Theme.water.opacity(0.7), lineWidth: 1)
+                    }
+
+                    if let hx = hoverX, selectionStart == nil {
                         crosshair(hx: hx, size: size)
                     }
                 }
+                .clipped()
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
                     switch phase {
@@ -188,6 +234,26 @@ struct DashboardChartCard: View {
                     case .ended:          hoverX = nil
                     }
                 }
+                .gesture(
+                    DragGesture(minimumDistance: 5, coordinateSpace: .local)
+                        .onChanged { v in
+                            if selectionStart == nil { selectionStart = v.startLocation.x }
+                            selectionEnd = v.location.x
+                        }
+                        .onEnded { v in
+                            defer { selectionStart = nil; selectionEnd = nil }
+                            guard let start = selectionStart else { return }
+                            let lo = min(start, v.location.x)
+                            let hi = max(start, v.location.x)
+                            guard hi - lo > 15 else { return }
+                            let span = zoomRange.upperBound - zoomRange.lowerBound
+                            let newLo = zoomRange.lowerBound + (lo / size.width) * span
+                            let newHi = zoomRange.lowerBound + (hi / size.width) * span
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                zoomRange = max(0, newLo)...min(1000, newHi)
+                            }
+                        }
+                )
             }
             .frame(maxHeight: .infinity)
         }
@@ -199,13 +265,10 @@ struct DashboardChartCard: View {
 
     // MARK: - Live 2026 series
 
-    // Builds a YearSeries from real monthly-average readings.
-    // Falls back to the static placeholder when data isn't loaded yet.
     private var live2026: YearSeries {
         let readings2026 = appState.readings.filter { $0.year == 2026 }
         guard readings2026.count >= 2 else { return placeholder2026 }
 
-        // Monthly averages (only months that have data)
         var monthAvgs: [(month: Int, level: Double)] = []
         for month in 1...12 {
             let monthly = readings2026.filter { $0.month == month }
@@ -215,12 +278,10 @@ struct DashboardChartCard: View {
         }
         guard monthAvgs.count >= 2 else { return placeholder2026 }
 
-        // Convert to SVG points
         let pts = monthAvgs.map { ma in
             CGPoint(x: monthToSvgX(ma.month), y: ftToSvgY(ma.level))
         }
 
-        // Catmull-Rom → cubic bezier for smooth interpolation
         var segments: [CubicSegment] = []
         for i in 0..<pts.count - 1 {
             let p0 = pts[max(0, i - 1)]
@@ -232,14 +293,9 @@ struct DashboardChartCard: View {
             segments.append(CubicSegment(c1: c1, c2: c2, end: p2))
         }
 
-        return YearSeries(
-            year: "2026",
-            color: Theme.water,
-            start: pts[0],
-            curves: segments,
-            end: pts.last!,
-            dotPosition: pts.last
-        )
+        return YearSeries(year: "2026", color: Theme.water,
+                          start: pts[0], curves: segments,
+                          end: pts.last!, dotPosition: pts.last)
     }
 
     // MARK: - Legend
@@ -271,7 +327,8 @@ struct DashboardChartCard: View {
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             let ids = allSeriesIDs
-            let isIsolated = !hiddenSeries.contains(id) && ids.filter { $0 != id }.allSatisfy { hiddenSeries.contains($0) }
+            let isIsolated = !hiddenSeries.contains(id) &&
+                ids.filter { $0 != id }.allSatisfy { hiddenSeries.contains($0) }
             hiddenSeries = isIsolated ? [] : Set(ids.filter { $0 != id })
         }
         .onTapGesture(count: 1) {
@@ -283,7 +340,8 @@ struct DashboardChartCard: View {
 
     @ViewBuilder
     private func crosshair(hx: CGFloat, size: CGSize) -> some View {
-        let svgX     = hx / size.width * 1000
+        let span     = zoomRange.upperBound - zoomRange.lowerBound
+        let svgX     = hx / size.width * span + zoomRange.lowerBound
         let flipLeft = hx > size.width * 0.62
 
         Path { p in
@@ -343,10 +401,7 @@ struct DashboardChartCard: View {
             .background(theme.background)
             .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 1))
             .fixedSize()
-            .position(
-                x: flipLeft ? hx - 80 : hx + 80,
-                y: 72
-            )
+            .position(x: flipLeft ? hx - 80 : hx + 80, y: 72)
         }
     }
 
@@ -389,11 +444,15 @@ struct DashboardChartCard: View {
         return nil
     }
 
+    // Returns "MON DD" e.g. "AUG 8"
     private func dateLabel(atSvgX x: CGFloat) -> String {
         let months = ["JAN","FEB","MAR","APR","MAY","JUN",
                       "JUL","AUG","SEP","OCT","NOV","DEC"]
+        let daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         let idx = max(0, min(11, Int(x / 80)))
-        return months[idx]
+        let pos = (x - CGFloat(idx * 80)) / 80.0
+        let day = max(1, min(daysInMonth[idx], Int(pos * CGFloat(daysInMonth[idx])) + 1))
+        return "\(months[idx]) \(day)"
     }
 
     // MARK: - Gridlines
@@ -408,8 +467,10 @@ struct DashboardChartCard: View {
     }
 
     private func gridline(y: CGFloat, label: String, accent: Bool, dashed: Bool, size: CGSize) -> some View {
-        let start = scaledPoint(CGPoint(x: 40, y: y),   size: size)
-        let end   = scaledPoint(CGPoint(x: 1000, y: y), size: size)
+        // Always span the full visible width
+        let leftX  = max(40, zoomRange.lowerBound)
+        let start  = scaledPoint(CGPoint(x: leftX, y: y), size: size, xRange: zoomRange)
+        let end    = scaledPoint(CGPoint(x: zoomRange.upperBound, y: y), size: size, xRange: zoomRange)
         return ZStack(alignment: .topLeading) {
             Path { p in
                 p.move(to: start)

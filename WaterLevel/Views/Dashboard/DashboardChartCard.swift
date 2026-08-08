@@ -6,6 +6,7 @@
 //  2026 uses live daily readings (monthly averages → Catmull-Rom bezier).
 //  2022–2025 use static representative curves.
 //  Drag horizontally to zoom into a time range; RESET to restore full view.
+//  Y-axis scales dynamically to the data range of the currently visible series.
 //
 
 import SwiftUI
@@ -95,15 +96,17 @@ private let chartAvgCurves: [CubicSegment] = [
 ]
 private let chartAvgEnd = CGPoint(x: 1000, y: 142)
 
-// All 12 month label positions (start of each month zone)
+// All 12 month label positions (start of each month zone in SVG x)
 private let allMonthLabels: [(x: CGFloat, label: String)] = [
     (0, "JAN"), (80, "FEB"), (160, "MAR"), (240, "APR"),
     (320, "MAY"), (400, "JUN"), (480, "JUL"), (560, "AUG"),
     (640, "SEP"), (720, "OCT"), (800, "NOV"), (880, "DEC"),
 ]
 
-private func svgYToFt(_ svgY: CGFloat) -> CGFloat {
-    min(max(681.0 - (svgY - 34.0) * (76.0 / 192.0), 605), 681)
+// Fixed SVG-y ↔ ft mapping (absolute lake level coordinates, independent of display zoom).
+// 681 ft full pool = SVG y 34; 605 ft low threshold = SVG y 226.
+private func svgYToFt(_ svgY: CGFloat) -> Double {
+    Double(681.0 - (svgY - 34.0) * (76.0 / 192.0))
 }
 private func ftToSvgY(_ ft: Double) -> CGFloat {
     34.0 + CGFloat(681.0 - ft) * (192.0 / 76.0)
@@ -123,15 +126,93 @@ struct DashboardChartCard: View {
     @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
 
-    // Zoom state
     @State private var zoomRange: ClosedRange<CGFloat> = 0...1000
     @State private var selectionStart: CGFloat? = nil
     @State private var selectionEnd: CGFloat? = nil
 
     private var isZoomed: Bool { zoomRange.lowerBound > 1 || zoomRange.upperBound < 999 }
-
     private var allSeries: [YearSeries] { [live2026] + staticYearSeries }
     private var allSeriesIDs: [String] { allSeries.map(\.year) + [kAvg] }
+
+    // MARK: - Dynamic Y-axis range
+
+    /// SVG y range (top...bottom) covering all visible series within zoomRange,
+    /// with ±5 ft padding in lake-ft units and clamped to a sensible range.
+    private var chartYRange: ClosedRange<CGFloat> {
+        var minSvgY: CGFloat = 9999
+        var maxSvgY: CGFloat = -9999
+        var foundData = false
+        let xLo = zoomRange.lowerBound
+        let xHi = zoomRange.upperBound
+
+        func extend(_ pt: CGPoint) {
+            guard pt.x >= xLo && pt.x <= xHi else { return }
+            if !foundData { minSvgY = pt.y; maxSvgY = pt.y; foundData = true }
+            else { minSvgY = min(minSvgY, pt.y); maxSvgY = max(maxSvgY, pt.y) }
+        }
+
+        for series in allSeries where !hiddenSeries.contains(series.year) {
+            extend(series.start)
+            let n = CGFloat(series.curves.count)
+            for i in 1...120 { extend(evalBezier(series.curves, start: series.start, t: CGFloat(i) / 120 * n)) }
+            extend(series.end)
+        }
+        if !hiddenSeries.contains(kAvg) {
+            extend(chartAvgStart)
+            let n = CGFloat(chartAvgCurves.count)
+            for i in 1...120 { extend(evalBezier(chartAvgCurves, start: chartAvgStart, t: CGFloat(i) / 120 * n)) }
+            extend(chartAvgEnd)
+        }
+        guard foundData else { return 34...226 }
+
+        // Compute ft range with ±5 ft padding, clamped so we don't go meaninglessly above full pool
+        let highFt = min(682.0, svgYToFt(minSvgY) + 5.0)
+        let lowFt  = max(600.0, svgYToFt(maxSvgY) - 5.0)
+        let midFt  = (highFt + lowFt) / 2.0
+        // Enforce minimum 8 ft span so tightly-bunched data doesn't over-zoom
+        let halfSpan = max(4.0, (highFt - lowFt) / 2.0)
+
+        let topSvgY = ftToSvgY(min(682.0, midFt + halfSpan))
+        let botSvgY = ftToSvgY(max(600.0, midFt - halfSpan))
+        return topSvgY...botSvgY
+    }
+
+    /// Gridlines at nice ft intervals within chartYRange.
+    /// Always includes the 681 ft (full pool) and 605 ft (low threshold) anchors when in range.
+    private func dynamicGridlines() -> [(ft: Double, svgY: CGFloat, isAccent: Bool)] {
+        let yr     = chartYRange
+        let topFt  = svgYToFt(yr.lowerBound)
+        let botFt  = svgYToFt(yr.upperBound)
+        let span   = topFt - botFt
+
+        let step: Double
+        switch span {
+        case ..<3:  step = 0.5
+        case ..<6:  step = 1
+        case ..<12: step = 2
+        case ..<25: step = 5
+        case ..<60: step = 10
+        default:    step = 20
+        }
+
+        var ftSet = Set<Double>()
+        var ft = ceil(botFt / step) * step
+        while ft <= topFt + step * 0.01 { ftSet.insert(ft); ft += step }
+
+        // Always include full-pool and low-threshold anchors if in range; suppress nearby computed lines
+        for anchor in [681.0, 605.0] where anchor >= botFt - 0.5 && anchor <= topFt + 0.5 {
+            ftSet = ftSet.filter { abs($0 - anchor) >= 3.0 }
+            ftSet.insert(anchor)
+        }
+
+        return ftSet.sorted(by: >).compactMap { ft in
+            let sy = ftToSvgY(ft)
+            guard sy >= yr.lowerBound - 1 && sy <= yr.upperBound + 1 else { return nil }
+            return (ft: ft, svgY: sy, isAccent: abs(ft - 681) < 0.01 || abs(ft - 605) < 0.01)
+        }
+    }
+
+    // MARK: - Body
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -161,26 +242,29 @@ struct DashboardChartCard: View {
 
             GeometryReader { geo in
                 let size = geo.size
+                let yr   = chartYRange
+                let xSpan = zoomRange.upperBound - zoomRange.lowerBound
+
                 ZStack {
-                    gridlines(size: size)
+                    gridlines(size: size, yr: yr)
 
                     if !hiddenSeries.contains(kAvg) {
                         svgPath(start: chartAvgStart, curves: chartAvgCurves, lineTo: chartAvgEnd,
-                                size: size, xRange: zoomRange)
+                                size: size, xRange: zoomRange, yRange: yr)
                             .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
                     }
 
                     ForEach(Array(allSeries.reversed()), id: \.year) { series in
                         if !hiddenSeries.contains(series.year) {
                             svgPath(start: series.start, curves: series.curves, lineTo: series.end,
-                                    size: size, xRange: zoomRange)
+                                    size: size, xRange: zoomRange, yRange: yr)
                                 .stroke(series.color, style: StrokeStyle(
                                     lineWidth: series.year == "2026" ? 2.5 : 1.5,
                                     lineCap: .round
                                 ))
 
                             if let dot = series.dotPosition {
-                                let dotPt = scaledPoint(dot, size: size, xRange: zoomRange)
+                                let dotPt = scaledPoint(dot, size: size, xRange: zoomRange, yRange: yr)
                                 if dotPt.x >= 0 && dotPt.x <= size.width {
                                     Circle()
                                         .fill(series.color)
@@ -191,39 +275,32 @@ struct DashboardChartCard: View {
                         }
                     }
 
-                    // Month labels — show all that fall within the visible range
+                    // Month labels pinned to the screen bottom regardless of y zoom
                     ForEach(Array(allMonthLabels.enumerated()), id: \.offset) { _, lbl in
                         if lbl.x < zoomRange.upperBound && (lbl.x + 80) > zoomRange.lowerBound {
-                            let pt = scaledPoint(CGPoint(x: lbl.x, y: 238), size: size, xRange: zoomRange)
+                            let screenX = (lbl.x + 40 - zoomRange.lowerBound) / xSpan * size.width
                             Text(lbl.label)
                                 .font(AppFont.body(11))
                                 .foregroundStyle(theme.textMuted(0.55))
-                                .position(x: pt.x + 12, y: pt.y)
+                                .position(x: screenX, y: size.height - 14)
                         }
                     }
 
                     // Selection highlight during drag
                     if let s = selectionStart, let e = selectionEnd {
-                        let lo = min(s, e)
-                        let hi = max(s, e)
+                        let lo = min(s, e); let hi = max(s, e)
                         Rectangle()
                             .fill(Theme.water.opacity(0.1))
                             .frame(width: hi - lo, height: size.height)
                             .position(x: (lo + hi) / 2, y: size.height / 2)
-                        Path { p in
-                            p.move(to: CGPoint(x: lo, y: 0))
-                            p.addLine(to: CGPoint(x: lo, y: size.height))
-                        }
-                        .stroke(Theme.water.opacity(0.7), lineWidth: 1)
-                        Path { p in
-                            p.move(to: CGPoint(x: hi, y: 0))
-                            p.addLine(to: CGPoint(x: hi, y: size.height))
-                        }
-                        .stroke(Theme.water.opacity(0.7), lineWidth: 1)
+                        Path { p in p.move(to: CGPoint(x: lo, y: 0)); p.addLine(to: CGPoint(x: lo, y: size.height)) }
+                            .stroke(Theme.water.opacity(0.7), lineWidth: 1)
+                        Path { p in p.move(to: CGPoint(x: hi, y: 0)); p.addLine(to: CGPoint(x: hi, y: size.height)) }
+                            .stroke(Theme.water.opacity(0.7), lineWidth: 1)
                     }
 
                     if let hx = hoverX, selectionStart == nil {
-                        crosshair(hx: hx, size: size)
+                        crosshair(hx: hx, size: size, yr: yr)
                     }
                 }
                 .clipped()
@@ -243,8 +320,7 @@ struct DashboardChartCard: View {
                         .onEnded { v in
                             defer { selectionStart = nil; selectionEnd = nil }
                             guard let start = selectionStart else { return }
-                            let lo = min(start, v.location.x)
-                            let hi = max(start, v.location.x)
+                            let lo = min(start, v.location.x); let hi = max(start, v.location.x)
                             guard hi - lo > 15 else { return }
                             let span = zoomRange.upperBound - zoomRange.lowerBound
                             let newLo = zoomRange.lowerBound + (lo / size.width) * span
@@ -278,21 +354,15 @@ struct DashboardChartCard: View {
         }
         guard monthAvgs.count >= 2 else { return placeholder2026 }
 
-        let pts = monthAvgs.map { ma in
-            CGPoint(x: monthToSvgX(ma.month), y: ftToSvgY(ma.level))
-        }
+        let pts = monthAvgs.map { ma in CGPoint(x: monthToSvgX(ma.month), y: ftToSvgY(ma.level)) }
 
         var segments: [CubicSegment] = []
         for i in 0..<pts.count - 1 {
-            let p0 = pts[max(0, i - 1)]
-            let p1 = pts[i]
-            let p2 = pts[i + 1]
-            let p3 = pts[min(pts.count - 1, i + 2)]
+            let p0 = pts[max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[min(pts.count - 1, i + 2)]
             let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
             let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
             segments.append(CubicSegment(c1: c1, c2: c2, end: p2))
         }
-
         return YearSeries(year: "2026", color: Theme.water,
                           start: pts[0], curves: segments,
                           end: pts.last!, dotPosition: pts.last)
@@ -314,13 +384,10 @@ struct DashboardChartCard: View {
     private func legendToggle(id: String, color: Color, dashed: Bool, label: String) -> some View {
         let hidden = hiddenSeries.contains(id)
         return HStack(spacing: 5) {
-            Path { p in
-                p.move(to: CGPoint(x: 0, y: 1.25))
-                p.addLine(to: CGPoint(x: 14, y: 1.25))
-            }
-            .stroke(hidden ? theme.divider : color,
-                    style: StrokeStyle(lineWidth: 2.5, dash: dashed ? [3, 2] : []))
-            .frame(width: 14, height: 2.5)
+            Path { p in p.move(to: CGPoint(x: 0, y: 1.25)); p.addLine(to: CGPoint(x: 14, y: 1.25)) }
+                .stroke(hidden ? theme.divider : color,
+                        style: StrokeStyle(lineWidth: 2.5, dash: dashed ? [3, 2] : []))
+                .frame(width: 14, height: 2.5)
             Text(label).tracking(0.3)
         }
         .opacity(hidden ? 0.35 : 1)
@@ -339,28 +406,30 @@ struct DashboardChartCard: View {
     // MARK: - Crosshair
 
     @ViewBuilder
-    private func crosshair(hx: CGFloat, size: CGSize) -> some View {
+    private func crosshair(hx: CGFloat, size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
         let span     = zoomRange.upperBound - zoomRange.lowerBound
         let svgX     = hx / size.width * span + zoomRange.lowerBound
         let flipLeft = hx > size.width * 0.62
 
         Path { p in
             p.move(to: CGPoint(x: hx, y: 0))
-            p.addLine(to: CGPoint(x: hx, y: size.height * 0.86))
+            p.addLine(to: CGPoint(x: hx, y: size.height - 28))
         }
         .stroke(Theme.water.opacity(0.45), lineWidth: 1)
 
         ForEach(Array(allSeries.reversed()), id: \.year) { series in
-            yearDot(series: series, svgX: svgX, hx: hx, size: size)
+            yearDot(series: series, svgX: svgX, hx: hx, size: size, yr: yr)
         }
 
         crosshairTooltip(svgX: svgX, hx: hx, size: size, flipLeft: flipLeft)
     }
 
     @ViewBuilder
-    private func yearDot(series: YearSeries, svgX: CGFloat, hx: CGFloat, size: CGSize) -> some View {
+    private func yearDot(series: YearSeries, svgX: CGFloat, hx: CGFloat,
+                         size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
         if !hiddenSeries.contains(series.year), let svgY = levelY(for: series, atSvgX: svgX) {
-            let screenY = svgY * size.height / 255
+            let ySpan   = yr.upperBound - yr.lowerBound
+            let screenY = (svgY - yr.lowerBound) / ySpan * size.height
             Circle()
                 .fill(series.color)
                 .overlay(series.year == "2026" ? Circle().strokeBorder(theme.surface, lineWidth: 2) : nil)
@@ -381,9 +450,7 @@ struct DashboardChartCard: View {
                 ForEach(visible, id: \.year) { series in
                     if let svgY = levelY(for: series, atSvgX: svgX) {
                         HStack(spacing: 8) {
-                            Rectangle()
-                                .fill(series.color)
-                                .frame(width: 10, height: 2)
+                            Rectangle().fill(series.color).frame(width: 10, height: 2)
                             Text(series.year)
                                 .font(AppFont.body(11, weight: .semibold))
                                 .foregroundStyle(theme.textMuted(0.6))
@@ -421,33 +488,26 @@ struct DashboardChartCard: View {
     }
 
     private func levelY(for series: YearSeries, atSvgX targetX: CGFloat) -> CGFloat? {
-        let curves   = series.curves
-        let start    = series.start
-        let lineEnd  = series.end
-        let segCount = CGFloat(curves.count)
-        var prev = start
+        let segCount = CGFloat(series.curves.count)
+        var prev = series.start
         for i in 1...300 {
-            let t  = CGFloat(i) / 300 * segCount
-            let pt = evalBezier(curves, start: start, t: t)
+            let pt = evalBezier(series.curves, start: series.start, t: CGFloat(i) / 300 * segCount)
             if prev.x <= targetX && pt.x >= targetX {
                 let dx = pt.x - prev.x
-                let frac = dx == 0 ? 0.5 : (targetX - prev.x) / dx
-                return prev.y + frac * (pt.y - prev.y)
+                return prev.y + (dx == 0 ? 0 : (targetX - prev.x) / dx) * (pt.y - prev.y)
             }
             prev = pt
         }
-        if let lastEnd = curves.last?.end, lastEnd.x <= targetX, lineEnd.x >= targetX {
-            let dx = lineEnd.x - lastEnd.x
+        if let lastEnd = series.curves.last?.end, lastEnd.x <= targetX, series.end.x >= targetX {
+            let dx = series.end.x - lastEnd.x
             guard dx != 0 else { return lastEnd.y }
-            return lastEnd.y + (targetX - lastEnd.x) / dx * (lineEnd.y - lastEnd.y)
+            return lastEnd.y + (targetX - lastEnd.x) / dx * (series.end.y - lastEnd.y)
         }
         return nil
     }
 
-    // Returns "MON DD" e.g. "AUG 8"
     private func dateLabel(atSvgX x: CGFloat) -> String {
-        let months = ["JAN","FEB","MAR","APR","MAY","JUN",
-                      "JUL","AUG","SEP","OCT","NOV","DEC"]
+        let months      = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"]
         let daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         let idx = max(0, min(11, Int(x / 80)))
         let pos = (x - CGFloat(idx * 80)) / 80.0
@@ -457,31 +517,31 @@ struct DashboardChartCard: View {
 
     // MARK: - Gridlines
 
-    private func gridlines(size: CGSize) -> some View {
-        ZStack {
-            gridline(y: 34,  label: "681", accent: true,  dashed: false, size: size)
-            gridline(y: 98,  label: "655", accent: false, dashed: true,  size: size)
-            gridline(y: 162, label: "630", accent: false, dashed: true,  size: size)
-            gridline(y: 226, label: "605", accent: true,  dashed: false, size: size)
-        }
-    }
+    private func gridlines(size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
+        let lines    = dynamicGridlines()
+        let ySpan    = yr.upperBound - yr.lowerBound
+        let leftX    = max(40, zoomRange.lowerBound)
+        let xSpan    = zoomRange.upperBound - zoomRange.lowerBound
+        let startX   = (leftX - zoomRange.lowerBound) / xSpan * size.width
 
-    private func gridline(y: CGFloat, label: String, accent: Bool, dashed: Bool, size: CGSize) -> some View {
-        // Always span the full visible width
-        let leftX  = max(40, zoomRange.lowerBound)
-        let start  = scaledPoint(CGPoint(x: leftX, y: y), size: size, xRange: zoomRange)
-        let end    = scaledPoint(CGPoint(x: zoomRange.upperBound, y: y), size: size, xRange: zoomRange)
-        return ZStack(alignment: .topLeading) {
-            Path { p in
-                p.move(to: start)
-                p.addLine(to: end)
+        return ZStack {
+            ForEach(lines, id: \.ft) { gl in
+                let screenY = (gl.svgY - yr.lowerBound) / ySpan * size.height
+                ZStack(alignment: .topLeading) {
+                    Path { p in
+                        p.move(to: CGPoint(x: startX, y: screenY))
+                        p.addLine(to: CGPoint(x: size.width, y: screenY))
+                    }
+                    .stroke(gl.isAccent ? theme.accent : theme.divider,
+                            style: StrokeStyle(lineWidth: 1, dash: gl.isAccent ? [] : [2, 4]))
+
+                    let label = gl.ft == Double(Int(gl.ft)) ? "\(Int(gl.ft))" : String(format: "%.1f", gl.ft)
+                    Text(label)
+                        .font(AppFont.body(10.5, weight: gl.isAccent ? .bold : .regular))
+                        .foregroundStyle(gl.isAccent ? theme.accent : theme.textMuted(0.45))
+                        .position(x: 14, y: max(8, screenY - 4))
+                }
             }
-            .stroke(accent ? theme.accent : theme.divider,
-                    style: StrokeStyle(lineWidth: 1, dash: dashed ? [2, 4] : []))
-            Text(label)
-                .font(AppFont.body(10.5, weight: accent ? .bold : .regular))
-                .foregroundStyle(accent ? theme.accent : theme.textMuted(0.45))
-                .position(x: 14, y: start.y - 4)
         }
     }
 }

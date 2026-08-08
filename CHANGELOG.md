@@ -8,9 +8,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Dynamic Y-axis scaling** — chart vertical range auto-adjusts to fit only the visible series within the current x-zoom window. Toggling years off or zooming in compresses the Y scale to focus on the relevant data. Gridlines regenerate at nice ft intervals (0.5–20 ft steps). 681 ft (full pool) and 605 ft (low threshold) always appear as accent lines when in range.
+- **Loading feedback** — animated shimmer bar replaces the header divider while data fetches; the status dot pulses while loading.
+- **Stat grid contextual details** — each cell now shows a second line of context:
+  - **CURRENT LEVEL** — % full + ↑ Rising / ↓ Falling indicator (colored blue or red).
+  - **INFLOW** — ±% vs yesterday when net inflow two days running; otherwise ↓ X cfs outbound when lake is losing storage.
+  - **OUTFLOW** — "NET DAILY" label clarifying the figure is net.
+  - **30-YR HISTORICAL AVG** (renamed from VS 30-YR AVG) — shows the actual historical average level in ft as context for the ± delta.
 - **Live LCRA data** — `LakeDataService` actor fetches daily readings from `waterdatafortexas.org` CSV on app launch. Current Level and Capacity in the stat grid now show real values; the 2026 chart line is built from actual monthly averages via Catmull-Rom spline (falls back to placeholder while loading).
 - **`WaterLevel.entitlements`** — `com.apple.security.network.client` entitlement added so the sandboxed app can make outbound HTTPS requests.
 - **Header sync label** — shows "FETCHING DATA…" during load then "SYNCED JUST NOW / Xm AGO" from `AppState.lastUpdated`.
+
+### Changed
+- **Stat grid** — CAPACITY cell removed; its % full info moved into the CURRENT LEVEL detail row. All cells now use a consistent label + value + detail structure (invisible placeholder preserves alignment when detail is empty).
+- **Month labels** — centered within each month zone (was offset 12px from zone left edge).
+- **Top Y-axis label** — clamped to minimum 8pt from top edge so it never gets clipped.
 
 ### Fixed
 - Date parsing timezone bug: CSV date strings ("2026-01-01") were parsed as midnight UTC then queried in local time (UTC−6 Austin), shifting year/month by up to a day. Fixed by extracting `year` and `month` integers directly from the date string, stored on `DailyReading`.

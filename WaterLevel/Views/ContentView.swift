@@ -32,7 +32,7 @@ struct ContentView: View {
     private var syncLabel: String {
         guard let date = state.lastUpdated else { return "LIVE" }
         let secs = Int(-date.timeIntervalSinceNow)
-        if secs < 60  { return "LIVE · SYNCED JUST NOW" }
+        if secs < 60   { return "LIVE · SYNCED JUST NOW" }
         if secs < 3600 { return "LIVE · SYNCED \(secs / 60)M AGO" }
         return "LIVE · SYNCED \(secs / 3600)H AGO"
     }
@@ -50,9 +50,13 @@ struct ContentView: View {
                     Text("·")
                         .foregroundStyle(theme.textMuted(0.25))
                     HStack(spacing: 5) {
-                        Rectangle()
-                            .fill(state.isLoadingData ? theme.textMuted(0.4) : theme.accent)
-                            .frame(width: 5, height: 5)
+                        if state.isLoadingData {
+                            PulsingDot(color: theme.textMuted(0.5))
+                        } else {
+                            Rectangle()
+                                .fill(theme.accent)
+                                .frame(width: 5, height: 5)
+                        }
                         Text(state.isLoadingData ? "FETCHING DATA…" : syncLabel)
                             .font(AppFont.body(10.5, weight: .bold))
                             .foregroundStyle(state.isLoadingData ? theme.textMuted(0.4) : theme.accent)
@@ -99,8 +103,56 @@ struct ContentView: View {
         .padding(.top, 30)
         .padding(.bottom, 16)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(theme.divider).frame(height: 2)
+            if state.isLoadingData {
+                LoadingBar(color: theme.accent)
+            } else {
+                Rectangle().fill(theme.divider).frame(height: 2)
+            }
         }
+    }
+}
+
+// Animated shimmer bar — sweeps left-to-right while loading
+private struct LoadingBar: View {
+    let color: Color
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            let barW = geo.size.width * 0.4
+            LinearGradient(
+                colors: [.clear, color.opacity(0.5), color, color.opacity(0.5), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: barW, height: 2)
+            .offset(x: phase * (geo.size.width + barW) - barW)
+        }
+        .frame(height: 2)
+        .clipped()
+        .onAppear {
+            withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
+    }
+}
+
+// Pulsing dot for the loading state indicator
+private struct PulsingDot: View {
+    let color: Color
+    @State private var opacity: Double = 1
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 5, height: 5)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                    opacity = 0.15
+                }
+            }
     }
 }
 

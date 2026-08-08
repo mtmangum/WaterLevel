@@ -12,9 +12,10 @@ import Foundation
 struct DailyReading {
     let date: Date
     let year: Int
-    let month: Int           // 1–12
-    let waterLevel: Double   // feet above datum
-    let percentFull: Double  // 0–100
+    let month: Int              // 1–12
+    let waterLevel: Double      // feet above datum
+    let percentFull: Double     // 0–100
+    let storage: Double         // acre-feet (conservation_storage)
 }
 
 actor LakeDataService {
@@ -31,7 +32,17 @@ actor LakeDataService {
 
     // Returns the last year of daily readings, sorted oldest → newest.
     func fetchReadings() async throws -> [DailyReading] {
-        let url = URL(string: "https://waterdatafortexas.org/reservoirs/individual/travis-1year.csv")!
+        return try await fetch(suffix: "-1year")
+    }
+
+    // Returns full historical record (since 1940), sorted oldest → newest.
+    // Used for 30-year average computation.
+    func fetchAllReadings() async throws -> [DailyReading] {
+        return try await fetch(suffix: "")
+    }
+
+    private func fetch(suffix: String) async throws -> [DailyReading] {
+        let url = URL(string: "https://waterdatafortexas.org/reservoirs/individual/travis\(suffix).csv")!
         let (data, _) = try await URLSession.shared.data(from: url)
         guard let csv = String(data: data, encoding: .utf8) else {
             throw URLError(.cannotDecodeContentData)
@@ -51,10 +62,11 @@ actor LakeDataService {
                   let level   = Double(fields[1]),
                   let pct     = Double(fields[5]) else { continue }
             // Extract year/month directly from the date string to avoid timezone shifts
-            let parts = fields[0].split(separator: "-")
-            let year  = parts.count >= 1 ? (Int(parts[0]) ?? 0) : 0
-            let month = parts.count >= 2 ? (Int(parts[1]) ?? 0) : 0
-            result.append(DailyReading(date: date, year: year, month: month, waterLevel: level, percentFull: pct))
+            let parts   = fields[0].split(separator: "-")
+            let year    = parts.count >= 1 ? (Int(parts[0]) ?? 0) : 0
+            let month   = parts.count >= 2 ? (Int(parts[1]) ?? 0) : 0
+            let storage = fields.count >= 5 ? (Double(fields[4]) ?? 0) : 0
+            result.append(DailyReading(date: date, year: year, month: month, waterLevel: level, percentFull: pct, storage: storage))
         }
         return result.sorted { $0.date < $1.date }
     }

@@ -18,7 +18,7 @@ struct CubicSegment {
 /// scaled from the 1000x320 viewBox to `size`.
 func svgPath(start: CGPoint, curves: [CubicSegment], lineTo: CGPoint? = nil, size: CGSize) -> Path {
     let sx = size.width / 1000
-    let sy = size.height / 320
+    let sy = size.height / 255
     func p(_ pt: CGPoint) -> CGPoint { CGPoint(x: pt.x * sx, y: pt.y * sy) }
 
     var path = Path()
@@ -33,11 +33,11 @@ func svgPath(start: CGPoint, curves: [CubicSegment], lineTo: CGPoint? = nil, siz
 }
 
 func scaledPoint(_ pt: CGPoint, size: CGSize) -> CGPoint {
-    CGPoint(x: pt.x * size.width / 1000, y: pt.y * size.height / 320)
+    CGPoint(x: pt.x * size.width / 1000, y: pt.y * size.height / 255)
 }
 
 func scaledRect(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, size: CGSize) -> CGRect {
     let sx = size.width / 1000
-    let sy = size.height / 320
+    let sy = size.height / 255
     return CGRect(x: x * sx, y: y * sy, width: width * sx, height: height * sy)
 }

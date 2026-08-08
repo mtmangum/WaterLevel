@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Travis Level are documented here.
+All notable changes to WaterLevel are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
@@ -8,16 +8,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- **Hover crosshair on dashboard chart** — vertical tracking line (accent red, 45% opacity) follows the mouse; a dot snaps to the bezier curve; a square tooltip shows the nearest date label and interpolated water level in ft. Tooltip flips left when near the right edge.
-- **Range buttons wired to chart** — 1M / 1Y / 5Y / ALL each produce distinct curve data, axis labels, and chart title. Previously the selection was visual-only.
+- **5-year Jan–Dec overlay chart** — 2022–2026 year lines plotted on a shared Jan–Dec axis, replacing the single trailing-12-month line and range picker. Each year is a distinct neutral tone; 2026 (current year) renders in `Theme.water` blue and ends at the current month with a filled dot.
+- **Year toggle buttons in legend** — single-tap hides/shows a year; double-tap isolates that year (hides all others). Double-tapping an already-isolated year restores all lines.
+- **Multi-year crosshair tooltip** — hover shows an interpolated level (ft) for every visible year at the cursor position, with a color swatch per row. Tooltip flips left when near the right edge.
+- **Annual Summary popover** — header button opens a popover (arrowEdge: `.top`, minWidth 480) with the historical table, keeping the main layout uncluttered.
+- **App icon** — dark `#2D2B2B` background, white water-level bezier curve, blue gradient fill below the curve, red endpoint dot with white ring. Sizes 16–1024 generated and registered in the asset catalog.
+- **`Theme.water`** — `#2B82D4` static color token for the current-year line and crosshair accent.
+- **Grouped file structure** — source files reorganized into `Views/Dashboard`, `Views/Historical`, `Components`, and `Support` groups.
+
+### Changed
+- **Header** — title is now "LAKE TRAVIS" (subtitle "WATER LEVEL MONITOR · AUSTIN, TX"). Live indicator and dark/light toggle moved to the header; sidebar and footer removed entirely.
+- **Stat grid layout** — stats are 1/4 of the content height; chart is 3/4. Each stat cell stacks label → 22pt value → detail and scales to fill available width equally.
+- **Chart proportions** — SVG viewBox height reduced from 320 to 255 units to eliminate dead space below the month labels (~7% padding vs. the previous ~26%).
+- **2026 line color** — changed from accent red to `Theme.water` blue to distinguish the current year from UI chrome.
+- **Tooltip background** — changed from `theme.surface` to `theme.background` so the neutral-800 (2022) swatch is visible in dark mode.
+- **Month labels** — x-position calculated with `Int(x / 80)` directly so all 12 months appear smoothly under the crosshair (previously snapped every 2 months).
+- **Year lines left edge** — all series start at SVG x=40 (matching the left gridline) rather than x=0, so lines no longer extend behind the y-axis labels.
+
+### Removed
+- Sidebar navigation and sidebar footer.
+- Range picker (1M / 1Y / 5Y / ALL) — replaced by per-year toggles.
+- Scrollable annual-summary section in the main layout — moved to popover.
 
 ### Fixed
-- Sidebar nav items no longer show SF Symbol icons — design spec calls for flush-left text only.
-- "Historical" nav label corrected to "Historical Trends".
-- Range segmented control (1M / 1Y / 5Y / ALL) now only renders on the Dashboard tab; Historical Trends has no time-range control.
-- `FlatSegmentedControl` border no longer renders as an oversized box — added `.fixedSize(horizontal: false, vertical: true)` to prevent internal `Rectangle` dividers from accepting the parent's full offered height.
-- Header `HStack` alignment changed from `.lastTextBaseline` to `.center` so the segmented control positions correctly relative to the title block.
-- Historical chart 605 ft gridline now renders as a solid accent-red line (low-level threshold), matching the dashboard chart. Was incorrectly muted and dashed.
+- Tooltip ft values no longer fade — set to `theme.text` (was `theme.textMuted`).
+- Crosshair vertical line now uses `Theme.water` at 45% opacity (was accent red).
 
 ---
 

@@ -22,6 +22,7 @@ struct Theme {
     let isDark: Bool
 
     static let accent = Color(hex: 0xEC3013)
+    static let water  = Color(hex: 0x2B82D4)
     static let accent100 = Color(hex: 0xFFF2EF)
     static let accent200 = Color(hex: 0xFFDBD3)
     static let accent800 = Color(hex: 0x7A2415)

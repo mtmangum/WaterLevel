@@ -6,13 +6,8 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		A7C07FE33026DA56006A9AF5 /* File.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C07FE23026DA56006A9AF5 /* File.swift */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		A7C07FBA3026CBD3006A9AF5 /* WaterLevel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterLevel.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A7C07FE23026DA56006A9AF5 /* File.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = File.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,7 +32,6 @@
 		A7C07FB13026CBD3006A9AF5 = {
 			isa = PBXGroup;
 			children = (
-				A7C07FE23026DA56006A9AF5 /* File.swift */,
 				A7C07FBC3026CBD3006A9AF5 /* WaterLevel */,
 				A7C07FBB3026CBD3006A9AF5 /* Products */,
 			);
@@ -125,7 +119,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A7C07FE33026DA56006A9AF5 /* File.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

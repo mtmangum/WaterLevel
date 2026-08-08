@@ -2,12 +2,21 @@
 //  DashboardChartCard.swift
 //  WaterLevel
 //
-//  12-month trailing water level chart with mouse-hover crosshair and tooltip.
+//  Main water level chart. Legend items are clickable toggles.
+//  On the 1Y view prior-year lines (2025, 2024) provide year-over-year context.
 //
 
 import SwiftUI
 
-// MARK: - Per-range chart configs
+// MARK: - Data types
+
+private struct PriorYearLine {
+    let start: CGPoint
+    let curves: [CubicSegment]
+    let end: CGPoint
+    let color: Color
+    let year: String
+}
 
 private struct ChartConfig {
     let title: String
@@ -19,7 +28,10 @@ private struct ChartConfig {
     let avgCurves: [CubicSegment]
     let avgEnd: CGPoint
     let dotPosition: CGPoint
+    let priorYears: [PriorYearLine]
 }
+
+// MARK: - Chart configs
 
 private let config1M = ChartConfig(
     title: "WATER LEVEL — TRAILING 30 DAYS",
@@ -36,7 +48,19 @@ private let config1M = ChartConfig(
         CubicSegment(c1: CGPoint(x: 700, y: 103), c2: CGPoint(x: 850, y: 102), end: CGPoint(x: 1000, y: 100)),
     ],
     avgEnd: CGPoint(x: 1000, y: 100),
-    dotPosition: CGPoint(x: 1000, y: 118)
+    dotPosition: CGPoint(x: 1000, y: 118),
+    priorYears: [
+        PriorYearLine(
+            start: CGPoint(x: 0, y: 160),
+            curves: [
+                CubicSegment(c1: CGPoint(x: 300, y: 156), c2: CGPoint(x: 600, y: 148), end: CGPoint(x: 800, y: 142)),
+                CubicSegment(c1: CGPoint(x: 900, y: 140), c2: CGPoint(x: 950, y: 139), end: CGPoint(x: 1000, y: 138)),
+            ],
+            end: CGPoint(x: 1000, y: 138),
+            color: Theme.neutral500,
+            year: "JUL '25"
+        ),
+    ]
 )
 
 private let config1Y = ChartConfig(
@@ -44,7 +68,7 @@ private let config1Y = ChartConfig(
     xLabels: [(0, "AUG"), (160, "OCT"), (320, "DEC"), (480, "FEB"), (640, "APR"), (800, "JUN"), (960, "AUG")],
     levelStart: CGPoint(x: 0, y: 146),
     levelCurves: [
-        CubicSegment(c1: CGPoint(x: 80, y: 150),  c2: CGPoint(x: 160, y: 152), end: CGPoint(x: 220, y: 120)),
+        CubicSegment(c1: CGPoint(x: 80,  y: 150), c2: CGPoint(x: 160, y: 152), end: CGPoint(x: 220, y: 120)),
         CubicSegment(c1: CGPoint(x: 300, y: 84),  c2: CGPoint(x: 380, y: 110), end: CGPoint(x: 460, y: 168)),
         CubicSegment(c1: CGPoint(x: 540, y: 196), c2: CGPoint(x: 620, y: 206), end: CGPoint(x: 700, y: 148)),
         CubicSegment(c1: CGPoint(x: 780, y: 102), c2: CGPoint(x: 860, y: 100), end: CGPoint(x: 940, y: 112)),
@@ -52,13 +76,39 @@ private let config1Y = ChartConfig(
     levelEnd: CGPoint(x: 1000, y: 118),
     avgStart: CGPoint(x: 0, y: 110),
     avgCurves: [
-        CubicSegment(c1: CGPoint(x: 80, y: 108),  c2: CGPoint(x: 160, y: 118), end: CGPoint(x: 220, y: 96)),
+        CubicSegment(c1: CGPoint(x: 80,  y: 108), c2: CGPoint(x: 160, y: 118), end: CGPoint(x: 220, y: 96)),
         CubicSegment(c1: CGPoint(x: 300, y: 68),  c2: CGPoint(x: 380, y: 86),  end: CGPoint(x: 460, y: 132)),
         CubicSegment(c1: CGPoint(x: 540, y: 150), c2: CGPoint(x: 620, y: 158), end: CGPoint(x: 700, y: 90)),
         CubicSegment(c1: CGPoint(x: 780, y: 58),  c2: CGPoint(x: 860, y: 68),  end: CGPoint(x: 940, y: 80)),
     ],
     avgEnd: CGPoint(x: 1000, y: 84),
-    dotPosition: CGPoint(x: 1000, y: 118)
+    dotPosition: CGPoint(x: 1000, y: 118),
+    priorYears: [
+        PriorYearLine(
+            start: CGPoint(x: 0, y: 160),
+            curves: [
+                CubicSegment(c1: CGPoint(x: 80,  y: 162), c2: CGPoint(x: 160, y: 148), end: CGPoint(x: 220, y: 136)),
+                CubicSegment(c1: CGPoint(x: 300, y: 116), c2: CGPoint(x: 380, y: 130), end: CGPoint(x: 460, y: 158)),
+                CubicSegment(c1: CGPoint(x: 540, y: 178), c2: CGPoint(x: 620, y: 184), end: CGPoint(x: 700, y: 174)),
+                CubicSegment(c1: CGPoint(x: 780, y: 162), c2: CGPoint(x: 860, y: 168), end: CGPoint(x: 940, y: 172)),
+            ],
+            end: CGPoint(x: 1000, y: 166),
+            color: Theme.neutral500,
+            year: "2025"
+        ),
+        PriorYearLine(
+            start: CGPoint(x: 0, y: 118),
+            curves: [
+                CubicSegment(c1: CGPoint(x: 80,  y: 108), c2: CGPoint(x: 160, y: 102), end: CGPoint(x: 220, y: 90)),
+                CubicSegment(c1: CGPoint(x: 300, y: 72),  c2: CGPoint(x: 380, y: 80),  end: CGPoint(x: 460, y: 106)),
+                CubicSegment(c1: CGPoint(x: 540, y: 124), c2: CGPoint(x: 620, y: 130), end: CGPoint(x: 700, y: 108)),
+                CubicSegment(c1: CGPoint(x: 780, y: 90),  c2: CGPoint(x: 860, y: 96),  end: CGPoint(x: 940, y: 114)),
+            ],
+            end: CGPoint(x: 1000, y: 120),
+            color: Theme.neutral700,
+            year: "2024"
+        ),
+    ]
 )
 
 private let config5Y = ChartConfig(
@@ -78,7 +128,31 @@ private let config5Y = ChartConfig(
         CubicSegment(c1: CGPoint(x: 875, y: 106), c2: CGPoint(x: 940, y: 104), end: CGPoint(x: 1000, y: 100)),
     ],
     avgEnd: CGPoint(x: 1000, y: 100),
-    dotPosition: CGPoint(x: 1000, y: 118)
+    dotPosition: CGPoint(x: 1000, y: 118),
+    priorYears: [
+        PriorYearLine(
+            start: CGPoint(x: 0, y: 140),
+            curves: [
+                CubicSegment(c1: CGPoint(x: 150, y: 190), c2: CGPoint(x: 280, y: 210), end: CGPoint(x: 400, y: 130)),
+                CubicSegment(c1: CGPoint(x: 500, y: 80),  c2: CGPoint(x: 600, y: 120), end: CGPoint(x: 700, y: 160)),
+                CubicSegment(c1: CGPoint(x: 800, y: 190), c2: CGPoint(x: 900, y: 170), end: CGPoint(x: 1000, y: 150)),
+            ],
+            end: CGPoint(x: 1000, y: 150),
+            color: Theme.neutral500,
+            year: "2017-21"
+        ),
+        PriorYearLine(
+            start: CGPoint(x: 0, y: 110),
+            curves: [
+                CubicSegment(c1: CGPoint(x: 150, y: 130), c2: CGPoint(x: 300, y: 160), end: CGPoint(x: 450, y: 100)),
+                CubicSegment(c1: CGPoint(x: 560, y: 70),  c2: CGPoint(x: 670, y: 90),  end: CGPoint(x: 780, y: 140)),
+                CubicSegment(c1: CGPoint(x: 860, y: 160), c2: CGPoint(x: 940, y: 155), end: CGPoint(x: 1000, y: 148)),
+            ],
+            end: CGPoint(x: 1000, y: 148),
+            color: Theme.neutral700,
+            year: "2012-16"
+        ),
+    ]
 )
 
 private let configAll = ChartConfig(
@@ -86,7 +160,7 @@ private let configAll = ChartConfig(
     xLabels: [(0, "2018"), (160, "2019"), (320, "2020"), (480, "2021"), (640, "2022"), (800, "2023"), (920, "2024")],
     levelStart: CGPoint(x: 0, y: 90),
     levelCurves: [
-        CubicSegment(c1: CGPoint(x: 80, y: 60),   c2: CGPoint(x: 160, y: 50),  end: CGPoint(x: 240, y: 100)),
+        CubicSegment(c1: CGPoint(x: 80,  y: 60),  c2: CGPoint(x: 160, y: 50),  end: CGPoint(x: 240, y: 100)),
         CubicSegment(c1: CGPoint(x: 320, y: 150), c2: CGPoint(x: 400, y: 220), end: CGPoint(x: 480, y: 200)),
         CubicSegment(c1: CGPoint(x: 560, y: 180), c2: CGPoint(x: 630, y: 230), end: CGPoint(x: 700, y: 80)),
         CubicSegment(c1: CGPoint(x: 770, y: 55),  c2: CGPoint(x: 850, y: 70),  end: CGPoint(x: 920, y: 140)),
@@ -99,7 +173,20 @@ private let configAll = ChartConfig(
         CubicSegment(c1: CGPoint(x: 875, y: 102), c2: CGPoint(x: 940, y: 101), end: CGPoint(x: 1000, y: 100)),
     ],
     avgEnd: CGPoint(x: 1000, y: 100),
-    dotPosition: CGPoint(x: 1000, y: 118)
+    dotPosition: CGPoint(x: 1000, y: 118),
+    priorYears: [
+        PriorYearLine(
+            start: CGPoint(x: 0, y: 120),
+            curves: [
+                CubicSegment(c1: CGPoint(x: 100, y: 100), c2: CGPoint(x: 250, y: 150), end: CGPoint(x: 400, y: 190)),
+                CubicSegment(c1: CGPoint(x: 530, y: 210), c2: CGPoint(x: 660, y: 170), end: CGPoint(x: 780, y: 120)),
+                CubicSegment(c1: CGPoint(x: 870, y: 90),  c2: CGPoint(x: 950, y: 100), end: CGPoint(x: 1000, y: 130)),
+            ],
+            end: CGPoint(x: 1000, y: 130),
+            color: Theme.neutral500,
+            year: "2010-18"
+        ),
+    ]
 )
 
 private let rainfallBars: [(x: CGFloat, y: CGFloat, h: CGFloat)] = [
@@ -108,16 +195,15 @@ private let rainfallBars: [(x: CGFloat, y: CGFloat, h: CGFloat)] = [
     (780, 222, 26), (860, 232, 16), (940, 240, 8),
 ]
 
-// Y-axis scale: svgY=34 → 681 ft, svgY=260 → 605 ft (76 ft over 226 svg units)
-private let svgYMin: CGFloat = 34
-private let svgYRange: CGFloat = 226
-private let ftTop: CGFloat = 681
-private let ftRange: CGFloat = 76
-
 private func svgYToFt(_ svgY: CGFloat) -> CGFloat {
-    let raw = ftTop - (svgY - svgYMin) * (ftRange / svgYRange)
-    return min(max(raw, 605), 681)
+    min(max(681.0 - (svgY - 34.0) * (76.0 / 226.0), 605), 681)
 }
+
+// MARK: - Series identifiers
+
+private let kLevel    = "LEVEL"
+private let kAvg      = "30-YR AVG"
+private let kRainfall = "RAINFALL"
 
 // MARK: - View
 
@@ -125,6 +211,7 @@ struct DashboardChartCard: View {
     let theme: Theme
     let range: RangeOption
 
+    @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
 
     private var config: ChartConfig {
@@ -135,6 +222,9 @@ struct DashboardChartCard: View {
         case .all:      configAll
         }
     }
+
+    // The identifier used for the primary level line (differs by view type)
+    private var levelID: String { config.priorYears.isEmpty ? kLevel : "2026" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -150,13 +240,29 @@ struct DashboardChartCard: View {
                 let size = geo.size
                 ZStack {
                     gridlines(size: size)
-                    rainfall(size: size)
-                    svgPath(start: config.avgStart, curves: config.avgCurves, lineTo: config.avgEnd, size: size)
-                        .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
-                    svgPath(start: config.levelStart, curves: config.levelCurves, lineTo: config.levelEnd, size: size)
-                        .stroke(theme.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                    let dot = scaledPoint(config.dotPosition, size: size)
-                    Circle().fill(theme.accent).frame(width: 9, height: 9).position(dot)
+
+                    if !hiddenSeries.contains(kRainfall) && config.priorYears.isEmpty {
+                        rainfall(size: size)
+                    }
+
+                    ForEach(Array(config.priorYears.enumerated()), id: \.offset) { _, line in
+                        if !hiddenSeries.contains(line.year) {
+                            svgPath(start: line.start, curves: line.curves, lineTo: line.end, size: size)
+                                .stroke(line.color, lineWidth: 1.5)
+                        }
+                    }
+
+                    if !hiddenSeries.contains(kAvg) {
+                        svgPath(start: config.avgStart, curves: config.avgCurves, lineTo: config.avgEnd, size: size)
+                            .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
+                    }
+
+                    if !hiddenSeries.contains(levelID) {
+                        svgPath(start: config.levelStart, curves: config.levelCurves, lineTo: config.levelEnd, size: size)
+                            .stroke(theme.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        let dot = scaledPoint(config.dotPosition, size: size)
+                        Circle().fill(theme.accent).frame(width: 9, height: 9).position(dot)
+                    }
 
                     ForEach(Array(config.xLabels.enumerated()), id: \.offset) { _, label in
                         let pt = scaledPoint(CGPoint(x: label.x, y: 300), size: size)
@@ -184,33 +290,72 @@ struct DashboardChartCard: View {
         .padding(.top, 24)
         .padding(.bottom, 20)
         .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 2))
+        .onChange(of: range) { _ in hiddenSeries = [] }
     }
 
-    // MARK: - Crosshair overlay
+    // MARK: - Legend
+
+    private var legend: some View {
+        HStack(spacing: 12) {
+            if config.priorYears.isEmpty {
+                legendToggle(id: kLevel,    color: theme.accent,       dashed: false, label: "LEVEL")
+                legendToggle(id: kAvg,      color: theme.chartAvgLine, dashed: true,  label: "30-YR AVG")
+                legendToggle(id: kRainfall, color: Theme.neutral700,   dashed: false, label: "RAINFALL")
+            } else {
+                legendToggle(id: "2026", color: theme.accent,       dashed: false, label: "2026")
+                ForEach(Array(config.priorYears.enumerated()), id: \.offset) { _, line in
+                    legendToggle(id: line.year, color: line.color, dashed: false, label: line.year)
+                }
+                legendToggle(id: kAvg, color: theme.chartAvgLine, dashed: true, label: "30-YR AVG")
+            }
+        }
+        .font(AppFont.body(11, weight: .semibold))
+        .foregroundStyle(theme.textMuted(0.6))
+    }
+
+    private func legendToggle(id: String, color: Color, dashed: Bool, label: String) -> some View {
+        let hidden = hiddenSeries.contains(id)
+        return Button {
+            if hidden { hiddenSeries.remove(id) } else { hiddenSeries.insert(id) }
+        } label: {
+            HStack(spacing: 5) {
+                Path { p in
+                    p.move(to: CGPoint(x: 0, y: 1.25))
+                    p.addLine(to: CGPoint(x: 14, y: 1.25))
+                }
+                .stroke(hidden ? theme.divider : color,
+                        style: StrokeStyle(lineWidth: 2.5, dash: dashed ? [3, 2] : []))
+                .frame(width: 14, height: 2.5)
+                Text(label).tracking(0.3)
+            }
+            .opacity(hidden ? 0.35 : 1)
+        .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Crosshair
 
     @ViewBuilder
     private func crosshair(hx: CGFloat, size: CGSize) -> some View {
-        let svgX    = hx / size.width * 1000
-        let svgY    = levelY(atSvgX: svgX) ?? 146
-        let screenY = svgY * size.height / 320
-        let ft      = svgYToFt(svgY)
+        let svgX     = hx / size.width * 1000
+        let svgY     = levelY(atSvgX: svgX) ?? 146
+        let screenY  = svgY * size.height / 320
+        let ft       = svgYToFt(svgY)
         let flipLeft = hx > size.width * 0.62
 
-        // Vertical tracking line (stops above x-axis labels)
         Path { p in
             p.move(to: CGPoint(x: hx, y: 0))
             p.addLine(to: CGPoint(x: hx, y: size.height * 0.86))
         }
         .stroke(theme.accent.opacity(0.45), lineWidth: 1)
 
-        // Dot on the level curve
         Circle()
             .fill(theme.accent)
             .overlay(Circle().strokeBorder(theme.surface, lineWidth: 2))
             .frame(width: 9, height: 9)
             .position(x: hx, y: screenY)
 
-        // Tooltip balloon
         VStack(alignment: .leading, spacing: 3) {
             Text(dateLabel(atSvgX: svgX))
                 .font(AppFont.body(10.5, weight: .bold))
@@ -233,7 +378,6 @@ struct DashboardChartCard: View {
 
     // MARK: - Bezier sampling
 
-    // Evaluates the compound bezier at parameter t (0…segmentCount).
     private func evalBezier(_ curves: [CubicSegment], start: CGPoint, t: CGFloat) -> CGPoint {
         guard !curves.isEmpty else { return start }
         let segIdx = min(Int(t), curves.count - 1)
@@ -247,18 +391,14 @@ struct DashboardChartCard: View {
         )
     }
 
-    // Finds the level curve's SVG-space Y at a given SVG-space X via linear interpolation
-    // between densely-sampled bezier points. Also handles the final lineTo segment.
     private func levelY(atSvgX targetX: CGFloat) -> CGFloat? {
-        let curves  = config.levelCurves
-        let start   = config.levelStart
-        let lineEnd = config.levelEnd
-        let steps   = 300
+        let curves   = config.levelCurves
+        let start    = config.levelStart
+        let lineEnd  = config.levelEnd
         let segCount = CGFloat(curves.count)
-
         var prev = start
-        for i in 1...steps {
-            let t  = CGFloat(i) / CGFloat(steps) * segCount
+        for i in 1...300 {
+            let t  = CGFloat(i) / 300 * segCount
             let pt = evalBezier(curves, start: start, t: t)
             if prev.x <= targetX && pt.x >= targetX {
                 let dx = pt.x - prev.x
@@ -267,10 +407,7 @@ struct DashboardChartCard: View {
             }
             prev = pt
         }
-
-        // Final lineTo segment from last curve end to levelEnd
-        if let lastEnd = curves.last?.end,
-           lastEnd.x <= targetX, lineEnd.x >= targetX {
+        if let lastEnd = curves.last?.end, lastEnd.x <= targetX, lineEnd.x >= targetX {
             let dx = lineEnd.x - lastEnd.x
             guard dx != 0 else { return lastEnd.y }
             return lastEnd.y + (targetX - lastEnd.x) / dx * (lineEnd.y - lastEnd.y)
@@ -278,7 +415,6 @@ struct DashboardChartCard: View {
         return nil
     }
 
-    // Returns the nearest x-axis label for the given SVG x coordinate.
     private func dateLabel(atSvgX x: CGFloat) -> String {
         let labels = config.xLabels
         guard labels.count > 1 else { return labels.first?.text ?? "" }
@@ -293,28 +429,6 @@ struct DashboardChartCard: View {
 
     // MARK: - Static chart elements
 
-    private var legend: some View {
-        HStack(spacing: 16) {
-            legendItem(color: theme.accent, dashed: false, label: "Level")
-            legendItem(color: theme.chartAvgLine, dashed: true, label: "30-yr Avg")
-            legendItem(color: Theme.neutral700, dashed: false, label: "Rainfall")
-        }
-        .font(AppFont.body(11, weight: .semibold))
-        .foregroundStyle(theme.textMuted(0.6))
-    }
-
-    private func legendItem(color: Color, dashed: Bool, label: String) -> some View {
-        HStack(spacing: 5) {
-            Path { p in
-                p.move(to: CGPoint(x: 0, y: 1.25))
-                p.addLine(to: CGPoint(x: 14, y: 1.25))
-            }
-            .stroke(color, style: StrokeStyle(lineWidth: 2.5, dash: dashed ? [3, 2] : []))
-            .frame(width: 14, height: 2.5)
-            Text(label.uppercased()).tracking(0.3)
-        }
-    }
-
     private func gridlines(size: CGSize) -> some View {
         ZStack {
             gridline(y: 34,  label: "681", accent: true,  dashed: false, size: size)
@@ -326,8 +440,8 @@ struct DashboardChartCard: View {
     }
 
     private func gridline(y: CGFloat, label: String, accent: Bool, dashed: Bool, size: CGSize) -> some View {
-        let start = scaledPoint(CGPoint(x: 40, y: y),    size: size)
-        let end   = scaledPoint(CGPoint(x: 1000, y: y),  size: size)
+        let start = scaledPoint(CGPoint(x: 40, y: y),   size: size)
+        let end   = scaledPoint(CGPoint(x: 1000, y: y), size: size)
         return ZStack(alignment: .topLeading) {
             Path { p in
                 p.move(to: start)
@@ -335,7 +449,6 @@ struct DashboardChartCard: View {
             }
             .stroke(accent ? theme.accent : theme.divider,
                     style: StrokeStyle(lineWidth: 1, dash: dashed ? [2, 4] : []))
-
             Text(label)
                 .font(AppFont.body(10.5, weight: accent ? .bold : .regular))
                 .foregroundStyle(accent ? theme.accent : theme.textMuted(0.45))

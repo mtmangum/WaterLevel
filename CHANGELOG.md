@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Adaptive x-axis date labels** — chart x-axis granularity now scales with zoom level: monthly labels at full view, then bi-weekly → every 10 days → weekly → every 3 days → every 2 days → daily as the user zooms in. Labels in sub-monthly views use "MMM D" format (e.g. "JAN 15") at a slightly smaller size so context is always visible.
+- **Crosshair tooltip y-tracking** — tooltip now follows the cursor vertically (clamped to stay on canvas) instead of being fixed at a hardcoded y position. Horizontal offset increased from 80 to 90pt to clear the cursor and dots.
+
 ### Added
 - **All six Highland Lakes** — lake picker ("LAKE ▾") in the header lets users switch between Lake Buchanan, Lake Inks, Lake LBJ, Lake Marble Falls, Lake Travis, and Lake Austin. Each lake fetches its own CSV from waterdatafortexas.org, maintains its own disk cache, and scales the chart Y-axis to its full pool / low-threshold range.
 - **`Lake` struct** (`Lake.swift`) — encapsulates id (URL slug), display name, location, full pool ft, and low-threshold ft. Includes per-lake `ftToSvgY` / `svgYToFt` coordinate helpers so the chart renders correctly at any elevation range.

@@ -42,6 +42,7 @@ struct DashboardChartCard: View {
 
     @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
+    @State private var hoverY: CGFloat? = nil
 
     @State private var zoomRange: ClosedRange<CGFloat> = 0...1000
     @State private var selectionStart: CGFloat? = nil
@@ -100,6 +101,50 @@ struct DashboardChartCard: View {
         let botSvgY = lake.ftToSvgY(max(floor,   midFt - halfSpan))
         guard topSvgY < botSvgY else { return 34...226 }
         return topSvgY...botSvgY
+    }
+
+    // MARK: - Adaptive x-axis labels
+
+    /// Date tick labels whose granularity adapts to the current zoom level.
+    /// Wide view → month names; zoomed in → bi-weekly, weekly, or daily ticks with "MMM D" labels.
+    private var visibleDateTicks: [(x: CGFloat, label: String)] {
+        let span = zoomRange.upperBound - zoomRange.lowerBound
+        let daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        let monthNames  = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"]
+        // 80 SVG units = 1 month ≈ 30.5 days
+        let daysVisible = span / 80.0 * 30.5
+
+        // Wide enough that per-month labels are sufficient
+        guard daysVisible <= 270 else {
+            return allMonthLabels.filter { lbl in
+                lbl.x >= zoomRange.lowerBound - 5 && lbl.x <= zoomRange.upperBound + 5
+            }
+        }
+
+        let dayStep: Int
+        switch daysVisible {
+        case ..<10:  dayStep = 1
+        case ..<21:  dayStep = 2
+        case ..<45:  dayStep = 3
+        case ..<90:  dayStep = 7
+        case ..<135: dayStep = 10
+        default:     dayStep = 14
+        }
+
+        var result: [(x: CGFloat, label: String)] = []
+        for month in 1...12 {
+            let dim = daysInMonth[month - 1]
+            var day = 1
+            while day <= dim {
+                let x = 40.0 + CGFloat(month - 1) * 80.0 + CGFloat(day - 1) / CGFloat(dim) * 80.0
+                if x >= zoomRange.lowerBound - 2 && x <= zoomRange.upperBound + 2 {
+                    let label = day == 1 ? monthNames[month - 1] : "\(monthNames[month - 1]) \(day)"
+                    result.append((x: x, label: label))
+                }
+                day += dayStep
+            }
+        }
+        return result
     }
 
     /// Gridlines at nice ft intervals within chartYRange.
@@ -200,15 +245,13 @@ struct DashboardChartCard: View {
                         }
                     }
 
-                    // Month labels pinned to the screen bottom regardless of y zoom
-                    ForEach(Array(allMonthLabels.enumerated()), id: \.offset) { _, lbl in
-                        if lbl.x < zoomRange.upperBound && (lbl.x + 80) > zoomRange.lowerBound {
-                            let screenX = (lbl.x - zoomRange.lowerBound) / xSpan * size.width
-                            Text(lbl.label)
-                                .font(AppFont.body(11))
-                                .foregroundStyle(theme.textMuted(0.55))
-                                .position(x: screenX, y: size.height - 14)
-                        }
+                    // X-axis labels — granularity adapts to zoom level
+                    ForEach(Array(visibleDateTicks.enumerated()), id: \.offset) { _, tick in
+                        let screenX = (tick.x - zoomRange.lowerBound) / xSpan * size.width
+                        Text(tick.label)
+                            .font(AppFont.body(tick.label.count > 3 ? 9.5 : 11))
+                            .foregroundStyle(theme.textMuted(0.55))
+                            .position(x: screenX, y: size.height - 14)
                     }
 
                     // Selection highlight during drag
@@ -224,16 +267,16 @@ struct DashboardChartCard: View {
                             .stroke(Theme.water.opacity(0.7), lineWidth: 1)
                     }
 
-                    if let hx = hoverX, selectionStart == nil {
-                        crosshair(hx: hx, size: size, yr: yr)
+                    if let hx = hoverX, let hy = hoverY, selectionStart == nil {
+                        crosshair(hx: hx, hy: hy, size: size, yr: yr)
                     }
                 }
                 .clipped()
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
                     switch phase {
-                    case .active(let loc): hoverX = loc.x
-                    case .ended:          hoverX = nil
+                    case .active(let loc): hoverX = loc.x; hoverY = loc.y
+                    case .ended:          hoverX = nil;   hoverY = nil
                     }
                 }
                 .gesture(
@@ -264,6 +307,7 @@ struct DashboardChartCard: View {
             zoomRange = 0...1000
             hiddenSeries = []
             hoverX = nil
+            hoverY = nil
         }
     }
 
@@ -381,7 +425,7 @@ struct DashboardChartCard: View {
     // MARK: - Crosshair
 
     @ViewBuilder
-    private func crosshair(hx: CGFloat, size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
+    private func crosshair(hx: CGFloat, hy: CGFloat, size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
         let span     = zoomRange.upperBound - zoomRange.lowerBound
         let svgX     = hx / size.width * span + zoomRange.lowerBound
         let flipLeft = hx > size.width * 0.62
@@ -399,7 +443,7 @@ struct DashboardChartCard: View {
             yearDot(series: avg, svgX: svgX, hx: hx, size: size, yr: yr)
         }
 
-        crosshairTooltip(svgX: svgX, hx: hx, size: size, flipLeft: flipLeft)
+        crosshairTooltip(svgX: svgX, hx: hx, hy: hy, size: size, flipLeft: flipLeft)
     }
 
     @ViewBuilder
@@ -417,7 +461,7 @@ struct DashboardChartCard: View {
     }
 
     @ViewBuilder
-    private func crosshairTooltip(svgX: CGFloat, hx: CGFloat, size: CGSize, flipLeft: Bool) -> some View {
+    private func crosshairTooltip(svgX: CGFloat, hx: CGFloat, hy: CGFloat, size: CGSize, flipLeft: Bool) -> some View {
         let visible   = allSeries.filter { !hiddenSeries.contains($0.year) && levelY(for: $0, atSvgX: svgX) != nil }
         let avgSvgY   = (!hiddenSeries.contains(kAvg) ? avgSeries : nil).flatMap { levelY(for: $0, atSvgX: svgX) }
         if !visible.isEmpty || avgSvgY != nil {
@@ -462,7 +506,12 @@ struct DashboardChartCard: View {
             .background(theme.background)
             .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 1))
             .fixedSize()
-            .position(x: flipLeft ? hx - 80 : hx + 80, y: 72)
+            .position(
+                x: flipLeft ? hx - 90 : hx + 90,
+                // Track cursor y, clamped so tooltip stays fully on canvas.
+                // 90 = half of ~180pt max tooltip height; 30pt bottom reserve for month labels.
+                y: max(90, min(hy, size.height - 90 - 30))
+            )
         }
     }
 

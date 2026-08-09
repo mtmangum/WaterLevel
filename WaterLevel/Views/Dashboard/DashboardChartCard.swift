@@ -84,17 +84,21 @@ struct DashboardChartCard: View {
         }
         guard foundData else { return 34...226 }
 
-        // Compute ft range with ±5 ft padding, clamped to a sensible per-lake window.
-        let ceiling = lake.fullPool + 29.0
-        let floor   = lake.lowThreshold - 45.0
-        let highFt  = min(ceiling, lake.svgYToFt(minSvgY) + 5.0)
-        let lowFt   = max(floor,   lake.svgYToFt(maxSvgY) - 5.0)
-        let midFt   = (highFt + lowFt) / 2.0
-        // Enforce minimum 8 ft span so tightly-bunched data doesn't over-zoom
-        let halfSpan = max(4.0, (highFt - lowFt) / 2.0)
+        // Compute ft range with proportional padding, clamped to a sensible per-lake window.
+        let ceiling   = lake.fullPool + 29.0
+        let floor     = lake.lowThreshold - 45.0
+        let rawHighFt = lake.svgYToFt(minSvgY)
+        let rawLowFt  = lake.svgYToFt(maxSvgY)
+        let padding   = max(0.5, (rawHighFt - rawLowFt) * 0.15)
+        let highFt    = min(ceiling, rawHighFt + padding)
+        let lowFt     = max(floor,   rawLowFt - padding)
+        let midFt     = (highFt + lowFt) / 2.0
+        // Minimum span = 5% of the lake's natural operating range so tight data still shows variation
+        let halfSpan  = max((lake.fullPool - lake.lowThreshold) * 0.05, (highFt - lowFt) / 2.0)
 
         let topSvgY = lake.ftToSvgY(min(ceiling, midFt + halfSpan))
         let botSvgY = lake.ftToSvgY(max(floor,   midFt - halfSpan))
+        guard topSvgY < botSvgY else { return 34...226 }
         return topSvgY...botSvgY
     }
 
@@ -391,6 +395,9 @@ struct DashboardChartCard: View {
         ForEach(Array(allSeries.reversed()), id: \.year) { series in
             yearDot(series: series, svgX: svgX, hx: hx, size: size, yr: yr)
         }
+        if !hiddenSeries.contains(kAvg), let avg = avgSeries {
+            yearDot(series: avg, svgX: svgX, hx: hx, size: size, yr: yr)
+        }
 
         crosshairTooltip(svgX: svgX, hx: hx, size: size, flipLeft: flipLeft)
     }
@@ -411,8 +418,9 @@ struct DashboardChartCard: View {
 
     @ViewBuilder
     private func crosshairTooltip(svgX: CGFloat, hx: CGFloat, size: CGSize, flipLeft: Bool) -> some View {
-        let visible = allSeries.filter { !hiddenSeries.contains($0.year) && levelY(for: $0, atSvgX: svgX) != nil }
-        if !visible.isEmpty {
+        let visible   = allSeries.filter { !hiddenSeries.contains($0.year) && levelY(for: $0, atSvgX: svgX) != nil }
+        let avgSvgY   = (!hiddenSeries.contains(kAvg) ? avgSeries : nil).flatMap { levelY(for: $0, atSvgX: svgX) }
+        if !visible.isEmpty || avgSvgY != nil {
             VStack(alignment: .leading, spacing: 5) {
                 Text(dateLabel(atSvgX: svgX))
                     .font(AppFont.body(10.5, weight: .bold))
@@ -432,6 +440,21 @@ struct DashboardChartCard: View {
                         }
                         .frame(minWidth: 128)
                     }
+                }
+                if let svgY = avgSvgY {
+                    HStack(spacing: 8) {
+                        Path { p in p.move(to: CGPoint(x: 0, y: 1)); p.addLine(to: CGPoint(x: 10, y: 1)) }
+                            .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
+                            .frame(width: 10, height: 2)
+                        Text(kAvg)
+                            .font(AppFont.body(11, weight: .semibold))
+                            .foregroundStyle(theme.textMuted(0.6))
+                        Spacer()
+                        Text(String(format: "%.1f ft", lake.svgYToFt(svgY)))
+                            .font(AppFont.body(12, weight: .heavy))
+                            .foregroundStyle(theme.text)
+                    }
+                    .frame(minWidth: 128)
                 }
             }
             .padding(.horizontal, 10)

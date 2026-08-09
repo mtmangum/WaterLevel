@@ -8,7 +8,9 @@ import Combine
 
 final class AppState: ObservableObject {
     @Published var isDark: Bool = true
-    @Published var selectedLake: Lake = .travis
+    @Published var selectedLake: Lake = Lake.all.first(where: {
+        $0.id == UserDefaults.standard.string(forKey: "selectedLakeID")
+    }) ?? .travis
     @Published var readings: [DailyReading] = []           // last 1 year
     @Published var historicalReadings: [DailyReading] = [] // full history
 
@@ -20,6 +22,8 @@ final class AppState: ObservableObject {
     @Published var isLoadingData = false
     @Published var dataError: String?
     @Published var lastUpdated: Date?
+
+    private var fetchGeneration = 0
 
     init() {
         // Load both caches synchronously so real data is present before the first frame renders.
@@ -37,6 +41,7 @@ final class AppState: ObservableObject {
     func selectLake(_ lake: Lake) {
         guard lake != selectedLake else { return }
         selectedLake = lake
+        UserDefaults.standard.set(lake.id, forKey: "selectedLakeID")
         readings = []
         historicalReadings = []
         thirtyYearMonthlyAvgs = []
@@ -69,16 +74,36 @@ final class AppState: ObservableObject {
         return thirtyYearMonthlyAvgs.first(where: { $0.month == currentMonth })?.level
     }
 
+    func prefetchAllLakes() async {
+        let currentID = selectedLake.id
+        let others = Lake.all.filter { $0.id != currentID }
+        await withTaskGroup(of: Void.self) { group in
+            for lake in others {
+                group.addTask {
+                    _ = try? await LakeDataService.shared.fetchReadings(for: lake, maxAge: 3600)
+                    _ = try? await LakeDataService.shared.fetchAllReadings(for: lake, maxAge: 6 * 3600)
+                }
+            }
+        }
+    }
+
     func fetchData() async {
-        // Cache was already loaded synchronously in init(); go straight to the network refresh.
-        await MainActor.run { isLoadingData = true }
+        // Each call gets a unique generation. Results are only applied if no newer fetch
+        // has started by the time we finish — prevents a slow/stale fetch from overwriting
+        // data for a lake the user has already switched away from.
+        let generation: Int = await MainActor.run {
+            fetchGeneration += 1
+            isLoadingData = true
+            return fetchGeneration
+        }
         do {
             let lake = selectedLake
             async let recent     = LakeDataService.shared.fetchReadings(for: lake)
-            async let historical = LakeDataService.shared.fetchAllReadings(for: lake)
+            async let historical = LakeDataService.shared.fetchAllReadings(for: lake, maxAge: 6 * 3600)
             let (r, h) = try await (recent, historical)
             let (avgs, yearMap) = Self.derivedData(r: r, h: h)
             await MainActor.run {
+                guard generation == fetchGeneration else { return }
                 readings               = r
                 historicalReadings     = h
                 thirtyYearMonthlyAvgs  = avgs
@@ -88,6 +113,7 @@ final class AppState: ObservableObject {
             }
         } catch {
             await MainActor.run {
+                guard generation == fetchGeneration else { return }
                 dataError     = error.localizedDescription
                 isLoadingData = false
             }
@@ -100,9 +126,14 @@ final class AppState: ObservableObject {
         let cutoff = currentYear - 30
         let relevant = h.filter { $0.year >= cutoff && $0.year < currentYear }
         let avgs: [(month: Int, level: Double)] = (1...12).compactMap { month in
-            let monthly = relevant.filter { $0.month == month }
+            let monthly = relevant.filter { $0.month == month && $0.waterLevel > 0 && $0.percentFull > 0 }
             guard !monthly.isEmpty else { return nil }
-            return (month, monthly.map(\.waterLevel).reduce(0, +) / Double(monthly.count))
+            // Trimmed mean: drop the lowest 20% to reduce skew from maintenance drawdowns and data anomalies
+            let sorted    = monthly.map(\.waterLevel).sorted()
+            let trimCount = sorted.count / 5
+            let trimmed   = sorted.dropFirst(trimCount)
+            guard !trimmed.isEmpty else { return nil }
+            return (month, trimmed.reduce(0, +) / Double(trimmed.count))
         }
         var yearMap: [Int: [DailyReading]] = [:]
         for year in [2022, 2023, 2024, 2025] {

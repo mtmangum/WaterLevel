@@ -10,6 +10,7 @@ struct ContentView: View {
     private var theme: Theme { state.theme }
 
     @State private var showAnnualSummary = false
+    @State private var showLakePicker = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,7 @@ struct ContentView: View {
         .preferredColorScheme(state.isDark ? .dark : .light)
         .task {
             await state.fetchData()
+            Task { await state.prefetchAllLakes() }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3600))
                 guard !Task.isCancelled else { break }
@@ -46,8 +48,51 @@ struct ContentView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("\(state.selectedLake.name) WATER LEVEL MONITOR")
-                    .font(AppFont.heading(16))
+                HStack(spacing: 6) {
+                    Button {
+                        showLakePicker.toggle()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .heavy))
+                            Text(state.selectedLake.name)
+                        }
+                        .font(AppFont.heading(16))
+                        .foregroundStyle(Theme.water)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showLakePicker, arrowEdge: .bottom) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Lake.all) { lake in
+                                Button {
+                                    state.selectLake(lake)
+                                    showLakePicker = false
+                                } label: {
+                                    HStack {
+                                        Text(lake.name)
+                                            .font(AppFont.body(13, weight: lake == state.selectedLake ? .bold : .regular))
+                                        Spacer()
+                                        if lake == state.selectedLake {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 11, weight: .semibold))
+                                        }
+                                    }
+                                    .foregroundStyle(lake == state.selectedLake ? Theme.water : theme.text)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .frame(minWidth: 200)
+                        .padding(.vertical, 8)
+                        .background(theme.background)
+                    }
+
+                    Text("WATER LEVEL MONITOR")
+                        .font(AppFont.heading(16))
+                }
                 HStack(spacing: 8) {
                     Text(state.selectedLake.location)
                         .font(AppFont.body(10.5, weight: .semibold))
@@ -72,35 +117,6 @@ struct ContentView: View {
 
             Spacer()
 
-            Menu {
-                ForEach(Lake.all) { lake in
-                    Button {
-                        state.selectLake(lake)
-                    } label: {
-                        if lake == state.selectedLake {
-                            Label(lake.name, systemImage: "checkmark")
-                        } else {
-                            Text(lake.name)
-                        }
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text("LAKE")
-                        .font(AppFont.body(11, weight: .semibold))
-                        .tracking(0.3)
-                        .foregroundStyle(theme.textMuted(0.5))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(theme.textMuted(0.35))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 1.5))
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-
             Button {
                 showAnnualSummary.toggle()
             } label: {
@@ -115,7 +131,7 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .popover(isPresented: $showAnnualSummary, arrowEdge: .top) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("ANNUAL SUMMARY")
+                    Text("\(Text(state.selectedLake.name).foregroundStyle(Theme.water)) ANNUAL SUMMARY")
                         .font(AppFont.body(13, weight: .heavy))
                         .tracking(0.2)
                     HistoricalTableView(theme: theme)

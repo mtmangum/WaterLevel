@@ -23,6 +23,13 @@ actor LakeDataService {
     static let shared = LakeDataService()
     private init() {}
 
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest  = 30   // seconds to receive first byte
+        config.timeoutIntervalForResource = 60   // seconds for the entire download
+        return URLSession(configuration: config)
+    }()
+
     private static let csvDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -32,22 +39,26 @@ actor LakeDataService {
     }()
 
     // Returns the last year of daily readings, sorted oldest → newest.
-    func fetchReadings(for lake: Lake) async throws -> [DailyReading] {
-        return try await fetch(lake: lake, suffix: "-1year")
+    func fetchReadings(for lake: Lake, maxAge: TimeInterval = 0) async throws -> [DailyReading] {
+        return try await fetch(lake: lake, suffix: "-1year", maxAge: maxAge)
     }
 
     // Returns full historical record (since 1940), sorted oldest → newest.
-    func fetchAllReadings(for lake: Lake) async throws -> [DailyReading] {
-        return try await fetch(lake: lake, suffix: "")
+    func fetchAllReadings(for lake: Lake, maxAge: TimeInterval = 0) async throws -> [DailyReading] {
+        return try await fetch(lake: lake, suffix: "", maxAge: maxAge)
     }
 
     // Reads cached readings synchronously (no actor hop, no await required).
     nonisolated func cachedReadings(for lake: Lake) -> [DailyReading]? { loadCache(lake: lake, suffix: "-1year") }
     nonisolated func cachedAllReadings(for lake: Lake) -> [DailyReading]? { loadCache(lake: lake, suffix: "") }
 
-    private func fetch(lake: Lake, suffix: String) async throws -> [DailyReading] {
+    private func fetch(lake: Lake, suffix: String, maxAge: TimeInterval = 0) async throws -> [DailyReading] {
+        if maxAge > 0, isCacheFresh(lake: lake, suffix: suffix, maxAge: maxAge),
+           let cached = loadCache(lake: lake, suffix: suffix) {
+            return cached
+        }
         let url = URL(string: "https://waterdatafortexas.org/reservoirs/individual/\(lake.id)\(suffix).csv")!
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await session.data(from: url)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             throw URLError(.badServerResponse)
         }
@@ -70,6 +81,13 @@ actor LakeDataService {
         let dir = base.appendingPathComponent("WaterLevel")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("\(lake.id)\(suffix).csv")
+    }
+
+    nonisolated private func isCacheFresh(lake: Lake, suffix: String, maxAge: TimeInterval) -> Bool {
+        guard let url = cacheURL(lake: lake, suffix: suffix),
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let modDate = attrs[.modificationDate] as? Date else { return false }
+        return Date().timeIntervalSince(modDate) < maxAge
     }
 
     nonisolated private func writeCache(_ csv: String, lake: Lake, suffix: String) {

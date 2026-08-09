@@ -18,7 +18,7 @@
 
 /* Begin PBXFileReference section */
 		A7403BD43028447100535C8A /* WaterLevelTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WaterLevelTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A7C07FBA3026CBD3006A9AF5 /* WaterLevel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterLevel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A7C07FBA3026CBD3006A9AF5 /* LakeLevel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LakeLevel.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -64,7 +64,7 @@
 		A7C07FBB3026CBD3006A9AF5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A7C07FBA3026CBD3006A9AF5 /* WaterLevel.app */,
+				A7C07FBA3026CBD3006A9AF5 /* LakeLevel.app */,
 				A7403BD43028447100535C8A /* WaterLevelTests.xctest */,
 			);
 			name = Products;
@@ -115,7 +115,7 @@
 			packageProductDependencies = (
 			);
 			productName = WaterLevel;
-			productReference = A7C07FBA3026CBD3006A9AF5 /* WaterLevel.app */;
+			productReference = A7C07FBA3026CBD3006A9AF5 /* LakeLevel.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -216,7 +216,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WaterLevel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WaterLevel";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LakeLevel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LakeLevel";
 			};
 			name = Debug;
 		};
@@ -236,7 +236,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WaterLevel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WaterLevel";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LakeLevel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LakeLevel";
 			};
 			name = Release;
 		};
@@ -375,6 +375,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = LakeLevel;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -382,7 +383,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = MTM.WaterLevel;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = LakeLevel;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -408,6 +409,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = LakeLevel;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -415,7 +417,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = MTM.WaterLevel;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = LakeLevel;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

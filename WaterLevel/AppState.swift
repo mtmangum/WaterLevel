@@ -8,6 +8,7 @@ import Combine
 
 final class AppState: ObservableObject {
     @Published var isDark: Bool = true
+    @Published var selectedLake: Lake = .travis
     @Published var readings: [DailyReading] = []           // last 1 year
     @Published var historicalReadings: [DailyReading] = [] // full history
 
@@ -23,14 +24,33 @@ final class AppState: ObservableObject {
     init() {
         // Load both caches synchronously so real data is present before the first frame renders.
         // Both CSVs parse in < 25 ms total — negligible on the main thread during init.
-        if let r = LakeDataService.shared.cachedReadings(),
-           let h = LakeDataService.shared.cachedAllReadings() {
+        if let r = LakeDataService.shared.cachedReadings(for: selectedLake),
+           let h = LakeDataService.shared.cachedAllReadings(for: selectedLake) {
             let (avgs, yearMap) = Self.derivedData(r: r, h: h)
             readings               = r
             historicalReadings     = h
             thirtyYearMonthlyAvgs  = avgs
             chartYearDailyReadings = yearMap
         }
+    }
+
+    func selectLake(_ lake: Lake) {
+        guard lake != selectedLake else { return }
+        selectedLake = lake
+        readings = []
+        historicalReadings = []
+        thirtyYearMonthlyAvgs = []
+        chartYearDailyReadings = [:]
+        lastUpdated = nil
+        if let r = LakeDataService.shared.cachedReadings(for: lake),
+           let h = LakeDataService.shared.cachedAllReadings(for: lake) {
+            let (avgs, yearMap) = Self.derivedData(r: r, h: h)
+            readings               = r
+            historicalReadings     = h
+            thirtyYearMonthlyAvgs  = avgs
+            chartYearDailyReadings = yearMap
+        }
+        Task { await fetchData() }
     }
 
     var theme: Theme { Theme(isDark: isDark) }
@@ -53,8 +73,9 @@ final class AppState: ObservableObject {
         // Cache was already loaded synchronously in init(); go straight to the network refresh.
         await MainActor.run { isLoadingData = true }
         do {
-            async let recent     = LakeDataService.shared.fetchReadings()
-            async let historical = LakeDataService.shared.fetchAllReadings()
+            let lake = selectedLake
+            async let recent     = LakeDataService.shared.fetchReadings(for: lake)
+            async let historical = LakeDataService.shared.fetchAllReadings(for: lake)
             let (r, h) = try await (recent, historical)
             let (avgs, yearMap) = Self.derivedData(r: r, h: h)
             await MainActor.run {

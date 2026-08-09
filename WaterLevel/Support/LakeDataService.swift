@@ -32,21 +32,21 @@ actor LakeDataService {
     }()
 
     // Returns the last year of daily readings, sorted oldest → newest.
-    func fetchReadings() async throws -> [DailyReading] {
-        return try await fetch(suffix: "-1year")
+    func fetchReadings(for lake: Lake) async throws -> [DailyReading] {
+        return try await fetch(lake: lake, suffix: "-1year")
     }
 
     // Returns full historical record (since 1940), sorted oldest → newest.
-    func fetchAllReadings() async throws -> [DailyReading] {
-        return try await fetch(suffix: "")
+    func fetchAllReadings(for lake: Lake) async throws -> [DailyReading] {
+        return try await fetch(lake: lake, suffix: "")
     }
 
     // Reads cached readings synchronously (no actor hop, no await required).
-    nonisolated func cachedReadings() -> [DailyReading]? { loadCache(suffix: "-1year") }
-    nonisolated func cachedAllReadings() -> [DailyReading]? { loadCache(suffix: "") }
+    nonisolated func cachedReadings(for lake: Lake) -> [DailyReading]? { loadCache(lake: lake, suffix: "-1year") }
+    nonisolated func cachedAllReadings(for lake: Lake) -> [DailyReading]? { loadCache(lake: lake, suffix: "") }
 
-    private func fetch(suffix: String) async throws -> [DailyReading] {
-        let url = URL(string: "https://waterdatafortexas.org/reservoirs/individual/travis\(suffix).csv")!
+    private func fetch(lake: Lake, suffix: String) async throws -> [DailyReading] {
+        let url = URL(string: "https://waterdatafortexas.org/reservoirs/individual/\(lake.id)\(suffix).csv")!
         let (data, response) = try await URLSession.shared.data(from: url)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             throw URLError(.badServerResponse)
@@ -58,27 +58,27 @@ actor LakeDataService {
         guard !readings.isEmpty else {
             throw URLError(.cannotParseResponse)
         }
-        writeCache(csv, suffix: suffix)
+        writeCache(csv, lake: lake, suffix: suffix)
         return readings
     }
 
     // MARK: - Cache
 
-    nonisolated private func cacheURL(suffix: String) -> URL? {
+    nonisolated private func cacheURL(lake: Lake, suffix: String) -> URL? {
         guard let base = FileManager.default.urls(for: .applicationSupportDirectory,
                                                   in: .userDomainMask).first else { return nil }
         let dir = base.appendingPathComponent("WaterLevel")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("travis\(suffix).csv")
+        return dir.appendingPathComponent("\(lake.id)\(suffix).csv")
     }
 
-    nonisolated private func writeCache(_ csv: String, suffix: String) {
-        guard let url = cacheURL(suffix: suffix) else { return }
+    nonisolated private func writeCache(_ csv: String, lake: Lake, suffix: String) {
+        guard let url = cacheURL(lake: lake, suffix: suffix) else { return }
         try? csv.write(to: url, atomically: true, encoding: .utf8)
     }
 
-    nonisolated private func loadCache(suffix: String) -> [DailyReading]? {
-        guard let url = cacheURL(suffix: suffix),
+    nonisolated private func loadCache(lake: Lake, suffix: String) -> [DailyReading]? {
+        guard let url = cacheURL(lake: lake, suffix: suffix),
               let csv = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         let result = parseCSV(csv)
         return result.isEmpty ? nil : result

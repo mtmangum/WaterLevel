@@ -1,7 +1,6 @@
 //
 //  HistoricalTableView.swift
 //  WaterLevel
-//
 
 import SwiftUI
 
@@ -14,16 +13,38 @@ private struct YearRow: Identifiable {
     let percentFull: String
 }
 
-private let rows: [YearRow] = [
-    YearRow(year: "2026 (YTD)", min: "630.1", max: "648.9", avg: "639.5", percentFull: "72%"),
-    YearRow(year: "2025", min: "612.8", max: "661.2", avg: "638.0", percentFull: "58%"),
-    YearRow(year: "2024", min: "625.4", max: "670.9", avg: "649.8", percentFull: "81%"),
-    YearRow(year: "2023", min: "608.0", max: "642.1", avg: "624.7", percentFull: "44%"),
-    YearRow(year: "2022", min: "617.3", max: "655.6", avg: "636.2", percentFull: "63%"),
-]
-
 struct HistoricalTableView: View {
     let theme: Theme
+    @EnvironmentObject var appState: AppState
+
+    private var rows: [YearRow] {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let years = (currentYear - 4)...currentYear
+
+        return years.reversed().compactMap { year in
+            let readings = appState.historicalReadings.filter { $0.year == year }
+            guard !readings.isEmpty else { return nil }
+
+            let levels = readings.map(\.waterLevel)
+            let minFt = levels.min()!
+            let maxFt = levels.max()!
+            let avgFt = levels.reduce(0, +) / Double(levels.count)
+
+            // Year-end % full: use Dec 31 reading, or last available day for current year
+            let yearEnd = readings.filter { year == currentYear ? true : $0.month == 12 }
+                .sorted { $0.date > $1.date }.first
+            let pctStr = yearEnd.map { String(format: "%.0f%%", $0.percentFull) } ?? "—"
+
+            let label = year == currentYear ? "\(year) (YTD)" : "\(year)"
+            return YearRow(
+                year: label,
+                min:  String(format: "%.1f", minFt),
+                max:  String(format: "%.1f", maxFt),
+                avg:  String(format: "%.1f", avgFt),
+                percentFull: pctStr
+            )
+        }
+    }
 
     private let columns = [
         GridItem(.flexible(), alignment: .leading),
@@ -49,19 +70,26 @@ struct HistoricalTableView: View {
                 Rectangle().fill(theme.divider).frame(height: 2)
             }
 
-            ForEach(rows) { row in
-                LazyVGrid(columns: columns, spacing: 0) {
-                    cell(row.year)
-                    cell(row.min)
-                    cell(row.max)
-                    cell(row.avg)
-                    cell(row.percentFull)
-                }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
-                .overlay(alignment: .bottom) {
-                    if row.id != rows.last?.id {
-                        Rectangle().fill(theme.divider.opacity(0.5)).frame(height: 1)
+            if rows.isEmpty {
+                Text("Loading…")
+                    .font(AppFont.body(13))
+                    .foregroundStyle(theme.textMuted(0.45))
+                    .padding(24)
+            } else {
+                ForEach(rows) { row in
+                    LazyVGrid(columns: columns, spacing: 0) {
+                        cell(row.year)
+                        cell(row.min)
+                        cell(row.max)
+                        cell(row.avg)
+                        cell(row.percentFull)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 20)
+                    .overlay(alignment: .bottom) {
+                        if row.id != rows.last?.id {
+                            Rectangle().fill(theme.divider.opacity(0.5)).frame(height: 1)
+                        }
                     }
                 }
             }

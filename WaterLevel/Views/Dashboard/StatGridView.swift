@@ -15,7 +15,9 @@ struct StatGridView: View {
 
     private var levelString: String {
         guard let r = latest else { return "—" }
-        return String(format: "%.1f ft", r.waterLevel)
+        return r.waterLevel >= 1000
+            ? String(format: "%.0f ft", r.waterLevel)
+            : String(format: "%.1f ft", r.waterLevel)
     }
 
     private static let cfsFormatter: NumberFormatter = {
@@ -162,6 +164,8 @@ struct StatGridView: View {
                 .tracking(0.5)
                 .foregroundStyle(theme.textMuted(0.45))
             value()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             detail()
                 .font(AppFont.body(11))
         }

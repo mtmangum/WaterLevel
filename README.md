@@ -1,35 +1,42 @@
-# WaterLevel
+# LakeLevel
 
-A native macOS app for monitoring real-time and historical water levels for Lake Travis, Austin TX.
+A native macOS app for monitoring real-time and historical water levels for all six LCRA Highland Lakes in Texas.
 
-![WaterLevel dark mode](screenshots/app-dark.png)
+![LakeLevel dark mode](screenshots/app-dark.png)
 
 ## Features
 
-- **Dashboard** — current lake level, inflow, outflow, and vs-historical-average stats
-- **5-year overlay chart** — 2022–2026 lines on a shared Jan–Dec axis; current year (2026) in blue with a live endpoint dot
+- **All six Highland Lakes** — switch between Lake Buchanan, Inks, LBJ, Marble Falls, Travis, and Austin via the LAKE ▾ picker in the header
+- **Dashboard** — current lake level, inflow, outflow, and vs-30-yr-average stats; updates automatically every hour
+- **5-year overlay chart** — 2022–2026 lines on a shared Jan–Dec axis; current year in blue with a live endpoint dot
 - **Year toggles** — single-tap hides/shows a year; double-tap isolates it
 - **Interactive crosshair** — hover shows interpolated water level (ft) for every visible year
-- **Annual Summary popover** — header button opens a historical min/max/avg table without leaving the dashboard
+- **Drag to zoom** — drag across the chart to zoom into a date range; RESET to restore full view
+- **Annual Summary popover** — header button opens a live min/max/avg/year-end table for the selected lake
 - **Dark / Light mode** — toggled from the header; default is dark
+- **Disk cache** — chart renders instantly from cache on relaunch; network refresh runs in the background
 
 ## Design
 
-Flat modernist system: SF Pro Heavy/Bold, zero corner radius, 2px rule dividers, neutral ramp + `#2B82D4` water blue + `#EC3013` accent red. Tokens defined in `Theme.swift`.
+Flat modernist system: SF Pro Heavy/Bold, zero corner radius, 1 px rule dividers, neutral ramp + `#2B82D4` water blue + `#EC3013` accent red. Tokens defined in `Theme.swift`.
 
 ## Data
 
-Live daily readings from [waterdatafortexas.org](https://waterdatafortexas.org/) (LCRA). Both the trailing-year CSV and the full historical record (since 1940) are fetched on launch and cached to disk so the chart renders instantly on subsequent opens.
+Live daily readings from [waterdatafortexas.org](https://waterdatafortexas.org/) (LCRA). Both the trailing-year CSV and the full historical record (since 1940) are fetched on launch and cached to `~/Library/Application Support/WaterLevel/`. Data refreshes automatically every hour while the app is running.
 
-| Constant | Value |
+| Lake | Full Pool |
 |---|---|
-| Full pool | 681 ft MSL |
-| Low-level threshold | 605 ft MSL |
+| Lake Buchanan | 1020.5 ft MSL |
+| Lake Inks | 888.25 ft MSL |
+| Lake LBJ | 824.0 ft MSL |
+| Lake Marble Falls | 738.5 ft MSL |
+| Lake Travis | 681.0 ft MSL |
+| Lake Austin | 492.0 ft MSL |
 
 ## Requirements
 
-- macOS 13 Ventura or later
-- Xcode 15 or later
+- macOS 26 or later
+- Xcode 26 or later
 
 ## Project structure
 
@@ -43,17 +50,16 @@ WaterLevel/
 │   └── Tag.swift
 ├── Support/
 │   ├── ChartGeometry.swift     — bezier path helpers (1000×255 SVG viewBox)
+│   ├── Lake.swift              — Highland Lake definitions + per-lake coordinate math
+│   ├── LakeDataService.swift   — CSV fetch, parse, and disk cache
 │   ├── Theme.swift             — design tokens, AppFont, Spacing
 │   └── WindowConfigurator.swift
 └── Views/
-    ├── ContentView.swift       — root layout: header + dashboard
-    ├── SidebarView.swift
-    ├── Dashboard/
-    │   ├── DashboardView.swift         — proportional layout (1/4 stats, 3/4 chart)
-    │   ├── StatGridView.swift          — 5-column stat row
-    │   └── DashboardChartCard.swift    — 5-year overlay chart with crosshair
-    └── Historical/
-        ├── HistoricalView.swift
-        ├── HistoricalChartCard.swift
-        └── HistoricalTableView.swift
+    ├── ContentView.swift       — root layout: header + lake picker + dashboard
+    └── Dashboard/
+        ├── DashboardView.swift         — proportional layout (1/4 stats, 3/4 chart)
+        ├── StatGridView.swift          — 4-column stat row
+        ├── DashboardChartCard.swift    — 5-year overlay chart with crosshair + zoom
+        └── Historical/
+            └── HistoricalTableView.swift — live annual summary table
 ```

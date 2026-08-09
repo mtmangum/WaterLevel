@@ -8,6 +8,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **All six Highland Lakes** — lake picker ("LAKE ▾") in the header lets users switch between Lake Buchanan, Lake Inks, Lake LBJ, Lake Marble Falls, Lake Travis, and Lake Austin. Each lake fetches its own CSV from waterdatafortexas.org, maintains its own disk cache, and scales the chart Y-axis to its full pool / low-threshold range.
+- **`Lake` struct** (`Lake.swift`) — encapsulates id (URL slug), display name, location, full pool ft, and low-threshold ft. Includes per-lake `ftToSvgY` / `svgYToFt` coordinate helpers so the chart renders correctly at any elevation range.
+- **Hourly auto-refresh** — the app re-fetches data every hour while running, keeping the "SYNCED X AGO" label current and picking up LCRA's daily CSV update automatically.
+- **Live Annual Summary table** — `HistoricalTableView` now computes min / max / avg / year-end % full from `historicalReadings` for the current lake instead of showing hardcoded Travis figures.
+
+### Changed
+- **App display name** renamed to **LakeLevel** (`CFBundleDisplayName`, `PRODUCT_NAME`). The dock, Cmd+Tab switcher, and About menu all reflect the new name; Xcode project and source files retain their original names.
+- **Gridline labels** for 4-digit elevations (≥ 1000 ft, e.g. Buchanan) format as integers to avoid clipping; label x-position is now centered in the available left margin rather than hardcoded at 14 pt.
+- **Stat value display** — current level ≥ 1000 ft drops the decimal (e.g. "1020 ft" not "1020.5 ft"); `minimumScaleFactor(0.75)` added as a safety net for all stat values.
+- **Travis placeholder curve removed** — switching to a lake with no cached data shows an empty chart and loading state rather than a Travis-shaped ghost curve.
+
+### Added
 - **Unit tests** — 23 tests using Swift Testing framework covering CSV parsing (`LakeDataServiceTests`), coordinate math (`ChartGeometryTests`), and boilerplate. All pass.
 - **`ChartGeometry` coordinate helpers** — `svgYToFt`, `ftToSvgY`, `monthToSvgX` promoted from private chart-file functions to internal module-level functions in `ChartGeometry.swift`, making them reusable and testable.
 

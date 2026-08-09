@@ -22,18 +22,6 @@ private struct YearSeries: Identifiable {
     let dotPosition: CGPoint?
 }
 
-private let placeholder2026 = YearSeries(
-    year: "2026",
-    color: Theme.water,
-    start: CGPoint(x: 80, y: 146),
-    curves: [
-        CubicSegment(c1: CGPoint(x: 140, y: 150), c2: CGPoint(x: 240, y: 152), end: CGPoint(x: 340, y: 120)),
-        CubicSegment(c1: CGPoint(x: 440, y: 84),  c2: CGPoint(x: 530, y: 105), end: CGPoint(x: 600, y: 118)),
-    ],
-    end: CGPoint(x: 600, y: 118),
-    dotPosition: CGPoint(x: 600, y: 118)
-)
-
 // Month label positions: left edge of each month zone in SVG x (data starts at x=40 = Jan 1)
 private let allMonthLabels: [(x: CGFloat, label: String)] = [
     (40, "JAN"), (120, "FEB"), (200, "MAR"), (280, "APR"),
@@ -50,6 +38,8 @@ struct DashboardChartCard: View {
     let theme: Theme
     @EnvironmentObject var appState: AppState
 
+    private var lake: Lake { appState.selectedLake }
+
     @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
 
@@ -58,7 +48,7 @@ struct DashboardChartCard: View {
     @State private var selectionEnd: CGFloat? = nil
 
     private var isZoomed: Bool { zoomRange.lowerBound > 1 || zoomRange.upperBound < 999 }
-    private var allSeries: [YearSeries] { [live2026] + historicalYearSeries }
+    private var allSeries: [YearSeries] { ([live2026] + historicalYearSeries).compactMap { $0 } }
     private var allSeriesIDs: [String] { allSeries.map(\.year) + [kAvg] }
 
     // MARK: - Dynamic Y-axis range
@@ -94,17 +84,17 @@ struct DashboardChartCard: View {
         }
         guard foundData else { return 34...226 }
 
-        // Compute ft range with ±5 ft padding.
-        // Upper: 710 ft (lake can flood above "full pool" 681 ft).
-        // Lower: 560 ft (well below any historical drought record).
-        let highFt = min(710.0, svgYToFt(minSvgY) + 5.0)
-        let lowFt  = max(560.0, svgYToFt(maxSvgY) - 5.0)
-        let midFt  = (highFt + lowFt) / 2.0
+        // Compute ft range with ±5 ft padding, clamped to a sensible per-lake window.
+        let ceiling = lake.fullPool + 29.0
+        let floor   = lake.lowThreshold - 45.0
+        let highFt  = min(ceiling, lake.svgYToFt(minSvgY) + 5.0)
+        let lowFt   = max(floor,   lake.svgYToFt(maxSvgY) - 5.0)
+        let midFt   = (highFt + lowFt) / 2.0
         // Enforce minimum 8 ft span so tightly-bunched data doesn't over-zoom
         let halfSpan = max(4.0, (highFt - lowFt) / 2.0)
 
-        let topSvgY = ftToSvgY(min(710.0, midFt + halfSpan))
-        let botSvgY = ftToSvgY(max(560.0, midFt - halfSpan))
+        let topSvgY = lake.ftToSvgY(min(ceiling, midFt + halfSpan))
+        let botSvgY = lake.ftToSvgY(max(floor,   midFt - halfSpan))
         return topSvgY...botSvgY
     }
 
@@ -112,8 +102,8 @@ struct DashboardChartCard: View {
     /// Always includes the 681 ft (full pool) and 605 ft (low threshold) anchors when in range.
     private func dynamicGridlines() -> [(ft: Double, svgY: CGFloat, isAccent: Bool)] {
         let yr     = chartYRange
-        let topFt  = svgYToFt(yr.lowerBound)
-        let botFt  = svgYToFt(yr.upperBound)
+        let topFt  = lake.svgYToFt(yr.lowerBound)
+        let botFt  = lake.svgYToFt(yr.upperBound)
         let span   = topFt - botFt
 
         let step: Double
@@ -131,15 +121,15 @@ struct DashboardChartCard: View {
         while ft <= topFt + step * 0.01 { ftSet.insert(ft); ft += step }
 
         // Always include full-pool and low-threshold anchors if in range; suppress nearby computed lines
-        for anchor in [681.0, 605.0] where anchor >= botFt - 0.5 && anchor <= topFt + 0.5 {
+        for anchor in [lake.fullPool, lake.lowThreshold] where anchor >= botFt - 0.5 && anchor <= topFt + 0.5 {
             ftSet = ftSet.filter { abs($0 - anchor) >= 3.0 }
             ftSet.insert(anchor)
         }
 
         return ftSet.sorted(by: >).compactMap { ft in
-            let sy = ftToSvgY(ft)
+            let sy = lake.ftToSvgY(ft)
             guard sy >= yr.lowerBound - 1 && sy <= yr.upperBound + 1 else { return nil }
-            return (ft: ft, svgY: sy, isAccent: abs(ft - 681) < 0.01 || abs(ft - 605) < 0.01)
+            return (ft: ft, svgY: sy, isAccent: abs(ft - lake.fullPool) < 0.01 || abs(ft - lake.lowThreshold) < 0.01)
         }
     }
 
@@ -266,14 +256,18 @@ struct DashboardChartCard: View {
         }
         .padding(.top, 16)
         .padding(.bottom, 20)
+        .onChange(of: appState.selectedLake) { _, _ in
+            zoomRange = 0...1000
+            hiddenSeries = []
+            hoverX = nil
+        }
     }
 
     // MARK: - Live series
 
-    private var live2026: YearSeries {
+    private var live2026: YearSeries? {
         let r = appState.readings.filter { $0.year == 2026 }
         return seriesFromDailyReadings(r, year: "2026", color: Theme.water, dotAtEnd: true)
-            ?? placeholder2026
     }
 
     private var historicalYearSeries: [YearSeries] {
@@ -322,7 +316,7 @@ struct DashboardChartCard: View {
     ) -> YearSeries? {
         guard readings.count >= 2 else { return nil }
         let pts = readings.map { r in
-            CGPoint(x: readingToSvgX(month: r.month, day: r.day), y: ftToSvgY(r.waterLevel))
+            CGPoint(x: readingToSvgX(month: r.month, day: r.day), y: lake.ftToSvgY(r.waterLevel))
         }
         let segs = buildSegments(pts: pts)
         return YearSeries(year: year, color: color,
@@ -335,10 +329,10 @@ struct DashboardChartCard: View {
         color: Color
     ) -> YearSeries? {
         guard avgs.count >= 2 else { return nil }
-        var pts = avgs.map { CGPoint(x: monthToSvgX($0.month), y: ftToSvgY($0.level)) }
+        var pts = avgs.map { CGPoint(x: monthToSvgX($0.month), y: lake.ftToSvgY($0.level)) }
         // Extend to Dec 31 (x=1000) so the avg line spans the same range as the year lines
         let decLevel = avgs.first(where: { $0.month == 12 })?.level ?? avgs.last!.level
-        pts.append(CGPoint(x: 1000, y: ftToSvgY(decLevel)))
+        pts.append(CGPoint(x: 1000, y: lake.ftToSvgY(decLevel)))
         let segs = buildSegments(pts: pts)
         return YearSeries(year: kAvg, color: color,
                           start: pts[0], curves: segs,
@@ -432,7 +426,7 @@ struct DashboardChartCard: View {
                                 .font(AppFont.body(11, weight: .semibold))
                                 .foregroundStyle(theme.textMuted(0.6))
                             Spacer()
-                            Text(String(format: "%.1f ft", svgYToFt(svgY)))
+                            Text(String(format: "%.1f ft", lake.svgYToFt(svgY)))
                                 .font(AppFont.body(12, weight: .heavy))
                                 .foregroundStyle(theme.text)
                         }
@@ -515,11 +509,15 @@ struct DashboardChartCard: View {
                     .stroke(gl.isAccent ? theme.accent : theme.divider,
                             style: StrokeStyle(lineWidth: 1, dash: gl.isAccent ? [] : [3, 5]))
 
-                    let label = gl.ft == Double(Int(gl.ft)) ? "\(Int(gl.ft))" : String(format: "%.1f", gl.ft)
+                    let label: String = {
+                        if gl.ft >= 1000 { return "\(Int(gl.ft.rounded()))" }
+                        return gl.ft == Double(Int(gl.ft)) ? "\(Int(gl.ft))" : String(format: "%.1f", gl.ft)
+                    }()
                     Text(label)
                         .font(AppFont.body(10.5, weight: gl.isAccent ? .bold : .regular))
                         .foregroundStyle(gl.isAccent ? theme.accent : theme.textMuted(0.35))
-                        .position(x: 14, y: max(8, screenY - 4))
+                        .fixedSize()
+                        .position(x: startX / 2, y: max(8, screenY - 4))
                 }
             }
         }

@@ -1,5 +1,5 @@
 import Testing
-@testable import WaterLevel
+@testable import LakeLevel
 
 @Suite("CSV parsing")
 struct LakeDataServiceTests {

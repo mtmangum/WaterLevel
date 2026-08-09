@@ -1,6 +1,6 @@
 import Testing
 import CoreGraphics
-@testable import WaterLevel
+@testable import LakeLevel
 
 @Suite("Chart coordinate math")
 struct ChartGeometryTests {

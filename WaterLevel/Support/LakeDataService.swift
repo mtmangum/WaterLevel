@@ -84,7 +84,7 @@ actor LakeDataService {
         return result.isEmpty ? nil : result
     }
 
-    nonisolated private func parseCSV(_ csv: String) -> [DailyReading] {
+    nonisolated func parseCSV(_ csv: String) -> [DailyReading] {
         var result: [DailyReading] = []
         for line in csv.components(separatedBy: "\n") {
             let t = line.trimmingCharacters(in: .whitespaces)

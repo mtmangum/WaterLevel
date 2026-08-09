@@ -6,11 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		A7403BD83028447100535C8A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A7C07FB23026CBD3006A9AF5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A7C07FB93026CBD3006A9AF5;
+			remoteInfo = WaterLevel;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		A7403BD43028447100535C8A /* WaterLevelTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WaterLevelTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7C07FBA3026CBD3006A9AF5 /* WaterLevel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterLevel.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A7403BD53028447100535C8A /* WaterLevelTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WaterLevelTests;
+			sourceTree = "<group>";
+		};
 		A7C07FBC3026CBD3006A9AF5 /* WaterLevel */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = WaterLevel;
@@ -19,6 +35,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A7403BD13028447100535C8A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A7C07FB73026CBD3006A9AF5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				A7C07FBC3026CBD3006A9AF5 /* WaterLevel */,
+				A7403BD53028447100535C8A /* WaterLevelTests */,
 				A7C07FBB3026CBD3006A9AF5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				A7C07FBA3026CBD3006A9AF5 /* WaterLevel.app */,
+				A7403BD43028447100535C8A /* WaterLevelTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +73,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A7403BD33028447100535C8A /* WaterLevelTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A7403BDC3028447100535C8A /* Build configuration list for PBXNativeTarget "WaterLevelTests" */;
+			buildPhases = (
+				A7403BD03028447100535C8A /* Sources */,
+				A7403BD13028447100535C8A /* Frameworks */,
+				A7403BD23028447100535C8A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A7403BD93028447100535C8A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A7403BD53028447100535C8A /* WaterLevelTests */,
+			);
+			name = WaterLevelTests;
+			packageProductDependencies = (
+			);
+			productName = WaterLevelTests;
+			productReference = A7403BD43028447100535C8A /* WaterLevelTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		A7C07FB93026CBD3006A9AF5 /* WaterLevel */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A7C07FC53026CBD4006A9AF5 /* Build configuration list for PBXNativeTarget "WaterLevel" */;
@@ -80,6 +128,10 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					A7403BD33028447100535C8A = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = A7C07FB93026CBD3006A9AF5;
+					};
 					A7C07FB93026CBD3006A9AF5 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -100,11 +152,19 @@
 			projectRoot = "";
 			targets = (
 				A7C07FB93026CBD3006A9AF5 /* WaterLevel */,
+				A7403BD33028447100535C8A /* WaterLevelTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A7403BD23028447100535C8A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A7C07FB83026CBD3006A9AF5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +175,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A7403BD03028447100535C8A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A7C07FB63026CBD3006A9AF5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +191,55 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A7403BD93028447100535C8A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A7C07FB93026CBD3006A9AF5 /* WaterLevel */;
+			targetProxy = A7403BD83028447100535C8A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		A7403BDA3028447100535C8A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7JXH7YF74V;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = MTM.WaterLevelTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WaterLevel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WaterLevel";
+			};
+			name = Debug;
+		};
+		A7403BDB3028447100535C8A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7JXH7YF74V;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = MTM.WaterLevelTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WaterLevel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WaterLevel";
+			};
+			name = Release;
+		};
 		A7C07FC33026CBD4006A9AF5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -255,7 +370,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7JXH7YF74V;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -288,7 +403,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7JXH7YF74V;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -314,6 +429,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A7403BDC3028447100535C8A /* Build configuration list for PBXNativeTarget "WaterLevelTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A7403BDA3028447100535C8A /* Debug */,
+				A7403BDB3028447100535C8A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A7C07FB53026CBD3006A9AF5 /* Build configuration list for PBXProject "WaterLevel" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

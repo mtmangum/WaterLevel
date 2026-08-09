@@ -41,17 +41,6 @@ private let allMonthLabels: [(x: CGFloat, label: String)] = [
     (680, "SEP"), (760, "OCT"), (840, "NOV"), (920, "DEC"),
 ]
 
-// Fixed SVG-y ↔ ft mapping (absolute lake level coordinates, independent of display zoom).
-// 681 ft full pool = SVG y 34; 605 ft low threshold = SVG y 226.
-private func svgYToFt(_ svgY: CGFloat) -> Double {
-    Double(681.0 - (svgY - 34.0) * (76.0 / 192.0))
-}
-private func ftToSvgY(_ ft: Double) -> CGFloat {
-    34.0 + CGFloat(681.0 - ft) * (192.0 / 76.0)
-}
-private func monthToSvgX(_ month: Int) -> CGFloat {
-    40.0 + CGFloat(month - 1) * 80.0   // left edge of each month zone (Jan 1 = 40)
-}
 
 private let kAvg = "30-YR AVG"
 
@@ -275,10 +264,8 @@ struct DashboardChartCard: View {
             }
             .frame(maxHeight: .infinity)
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 24)
+        .padding(.top, 16)
         .padding(.bottom, 20)
-        .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 2))
     }
 
     // MARK: - Live series
@@ -511,11 +498,11 @@ struct DashboardChartCard: View {
     // MARK: - Gridlines
 
     private func gridlines(size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
-        let lines    = dynamicGridlines()
-        let ySpan    = yr.upperBound - yr.lowerBound
-        let leftX    = max(40, zoomRange.lowerBound)
-        let xSpan    = zoomRange.upperBound - zoomRange.lowerBound
-        let startX   = (leftX - zoomRange.lowerBound) / xSpan * size.width
+        let lines  = dynamicGridlines()
+        let ySpan  = yr.upperBound - yr.lowerBound
+        let leftX  = max(40, zoomRange.lowerBound)
+        let xSpan  = zoomRange.upperBound - zoomRange.lowerBound
+        let startX = (leftX - zoomRange.lowerBound) / xSpan * size.width
 
         return ZStack {
             ForEach(lines, id: \.ft) { gl in
@@ -526,12 +513,12 @@ struct DashboardChartCard: View {
                         p.addLine(to: CGPoint(x: size.width, y: screenY))
                     }
                     .stroke(gl.isAccent ? theme.accent : theme.divider,
-                            style: StrokeStyle(lineWidth: 1, dash: gl.isAccent ? [] : [2, 4]))
+                            style: StrokeStyle(lineWidth: 1, dash: gl.isAccent ? [] : [3, 5]))
 
                     let label = gl.ft == Double(Int(gl.ft)) ? "\(Int(gl.ft))" : String(format: "%.1f", gl.ft)
                     Text(label)
                         .font(AppFont.body(10.5, weight: gl.isAccent ? .bold : .regular))
-                        .foregroundStyle(gl.isAccent ? theme.accent : theme.textMuted(0.45))
+                        .foregroundStyle(gl.isAccent ? theme.accent : theme.textMuted(0.35))
                         .position(x: 14, y: max(8, screenY - 4))
                 }
             }

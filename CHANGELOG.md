@@ -8,6 +8,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Unit tests** — 23 tests using Swift Testing framework covering CSV parsing (`LakeDataServiceTests`), coordinate math (`ChartGeometryTests`), and boilerplate. All pass.
+- **`ChartGeometry` coordinate helpers** — `svgYToFt`, `ftToSvgY`, `monthToSvgX` promoted from private chart-file functions to internal module-level functions in `ChartGeometry.swift`, making them reusable and testable.
+
+### Changed
+- **UI simplification** — removed outer border boxes from stat grid and chart card; replaced with a single 1 px rule between the header and the stat row and another between the stat row and the chart. Vertical dividers between stat cells removed. Chart gridlines thinned (3 px dash, dimmer label color). Header loading shimmer now overlays the rule rather than replacing it.
+- **App Sandbox disabled** for development builds on machines where the Personal Team certificate does not support the `network.client` entitlement; `WaterLevel.entitlements` reduced to `get-task-allow` only.
+
+### Added
 - **Real daily chart data** — all five year lines (2022–2026) now plot actual daily readings from the CSV via Catmull-Rom spline through 365 points, replacing fabricated static curves.
 - **Disk cache** — after each successful network fetch, both CSV files are saved to `~/Library/Application Support/WaterLevel/`. On the next launch the chart renders immediately from cache before the network refresh completes, so the chart is never empty on relaunch.
 - **Dynamic Y-axis scaling** — chart vertical range auto-adjusts to fit the visible data. Y bounds extended to 560–710 ft so the chart handles flood levels above full pool (681 ft) and drought lows below the old 600 ft floor. Gridlines use 10 ft steps for any span up to 150 ft.

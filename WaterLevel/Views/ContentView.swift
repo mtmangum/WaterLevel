@@ -17,7 +17,6 @@ struct ContentView: View {
             DashboardView(theme: theme)
                 .frame(maxHeight: .infinity)
                 .padding(.horizontal, 36)
-                .padding(.top, 20)
                 .padding(.bottom, 20)
         }
         .environmentObject(state)
@@ -99,16 +98,17 @@ struct ContentView: View {
                 fontSize: 11
             )
         }
-        .padding(.horizontal, 36)
         .padding(.top, 30)
         .padding(.bottom, 16)
         .overlay(alignment: .bottom) {
-            if state.isLoadingData {
-                LoadingBar(color: theme.accent)
-            } else {
-                Rectangle().fill(theme.divider).frame(height: 2)
+            ZStack {
+                Rectangle().fill(theme.divider).frame(height: 1)
+                if state.isLoadingData {
+                    LoadingBar(color: theme.accent)
+                }
             }
         }
+        .padding(.horizontal, 36)
     }
 }
 

@@ -57,3 +57,19 @@ func scaledRect(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat,
                   y: (y - yRange.lowerBound) * sy,
                   width: width * sx, height: height * sy)
 }
+
+// MARK: - Lake-level coordinate math
+// 681 ft (full pool) = SVG y 34; 605 ft (low threshold) = SVG y 226.
+// Scale: 76 ft over 192 SVG units.
+
+func svgYToFt(_ svgY: CGFloat) -> Double {
+    Double(681.0 - (svgY - 34.0) * (76.0 / 192.0))
+}
+
+func ftToSvgY(_ ft: Double) -> CGFloat {
+    34.0 + CGFloat(681.0 - ft) * (192.0 / 76.0)
+}
+
+func monthToSvgX(_ month: Int) -> CGFloat {
+    40.0 + CGFloat(month - 1) * 80.0
+}

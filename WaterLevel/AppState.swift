@@ -73,7 +73,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    private static func derivedData(r: [DailyReading], h: [DailyReading])
+    static func derivedData(r: [DailyReading], h: [DailyReading])
         -> (avgs: [(month: Int, level: Double)], yearMap: [Int: [DailyReading]]) {
         let currentYear = Calendar.current.component(.year, from: Date())
         let cutoff = currentYear - 30

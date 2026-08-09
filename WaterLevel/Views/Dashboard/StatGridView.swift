@@ -75,7 +75,6 @@ struct StatGridView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // CURRENT LEVEL — value + "% full  ↑ Rising / ↓ Falling"
             statItem(label: "CURRENT LEVEL") {
                 Text(levelString)
                     .font(AppFont.heading(22))
@@ -96,8 +95,6 @@ struct StatGridView: View {
                     detailPlaceholder
                 }
             }
-            divider
-            // INFLOW — value + "±% vs yesterday" or "↓ outbound" when net is negative
             statItem(label: "INFLOW") {
                 Text(inflowString)
                     .font(AppFont.heading(22))
@@ -117,8 +114,6 @@ struct StatGridView: View {
                     detailPlaceholder
                 }
             }
-            divider
-            // OUTFLOW — value + "NET DAILY" label
             statItem(label: "OUTFLOW") {
                 Text(outflowString)
                     .font(AppFont.heading(22))
@@ -127,8 +122,6 @@ struct StatGridView: View {
                 Text("NET DAILY")
                     .foregroundStyle(theme.textMuted(0.45))
             }
-            divider
-            // 30-YR HISTORICAL AVG — delta value + actual historical average level
             statItem(label: "30-YR HISTORICAL AVG") {
                 Text(vsAvgString)
                     .font(AppFont.heading(22))
@@ -142,7 +135,6 @@ struct StatGridView: View {
                 }
             }
         }
-        .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 2))
     }
 
     // MARK: - Helpers
@@ -155,8 +147,8 @@ struct StatGridView: View {
     private var divider: some View {
         Rectangle()
             .fill(theme.divider)
-            .frame(width: 1.5)
-            .padding(.vertical, 4)
+            .frame(width: 1)
+            .padding(.vertical, 2)
     }
 
     private func statItem<V: View, D: View>(
@@ -173,8 +165,8 @@ struct StatGridView: View {
             detail()
                 .font(AppFont.body(11))
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }

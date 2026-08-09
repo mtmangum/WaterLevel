@@ -13,6 +13,7 @@ struct DailyReading {
     let date: Date
     let year: Int
     let month: Int              // 1–12
+    let day: Int                // 1–31
     let waterLevel: Double      // feet above datum
     let percentFull: Double     // 0–100
     let storage: Double         // acre-feet (conservation_storage)
@@ -36,10 +37,13 @@ actor LakeDataService {
     }
 
     // Returns full historical record (since 1940), sorted oldest → newest.
-    // Used for 30-year average computation.
     func fetchAllReadings() async throws -> [DailyReading] {
         return try await fetch(suffix: "")
     }
+
+    // Reads cached readings from the previous network fetch (no network required).
+    func cachedReadings() -> [DailyReading]? { loadCache(suffix: "-1year") }
+    func cachedAllReadings() -> [DailyReading]? { loadCache(suffix: "") }
 
     private func fetch(suffix: String) async throws -> [DailyReading] {
         let url = URL(string: "https://waterdatafortexas.org/reservoirs/individual/travis\(suffix).csv")!
@@ -47,7 +51,30 @@ actor LakeDataService {
         guard let csv = String(data: data, encoding: .utf8) else {
             throw URLError(.cannotDecodeContentData)
         }
+        writeCache(csv, suffix: suffix)
         return parseCSV(csv)
+    }
+
+    // MARK: - Cache
+
+    private func cacheURL(suffix: String) -> URL? {
+        guard let base = FileManager.default.urls(for: .applicationSupportDirectory,
+                                                  in: .userDomainMask).first else { return nil }
+        let dir = base.appendingPathComponent("WaterLevel")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("travis\(suffix).csv")
+    }
+
+    private func writeCache(_ csv: String, suffix: String) {
+        guard let url = cacheURL(suffix: suffix) else { return }
+        try? csv.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    private func loadCache(suffix: String) -> [DailyReading]? {
+        guard let url = cacheURL(suffix: suffix),
+              let csv = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let result = parseCSV(csv)
+        return result.isEmpty ? nil : result
     }
 
     private func parseCSV(_ csv: String) -> [DailyReading] {
@@ -65,8 +92,9 @@ actor LakeDataService {
             let parts   = fields[0].split(separator: "-")
             let year    = parts.count >= 1 ? (Int(parts[0]) ?? 0) : 0
             let month   = parts.count >= 2 ? (Int(parts[1]) ?? 0) : 0
+            let day     = parts.count >= 3 ? (Int(parts[2]) ?? 0) : 0
             let storage = fields.count >= 5 ? (Double(fields[4]) ?? 0) : 0
-            result.append(DailyReading(date: date, year: year, month: month, waterLevel: level, percentFull: pct, storage: storage))
+            result.append(DailyReading(date: date, year: year, month: month, day: day, waterLevel: level, percentFull: pct, storage: storage))
         }
         return result.sorted { $0.date < $1.date }
     }

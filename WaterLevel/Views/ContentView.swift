@@ -40,10 +40,10 @@ struct ContentView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("LAKE TRAVIS")
+                Text("LAKE TRAVIS WATER LEVEL MONITOR")
                     .font(AppFont.heading(16))
                 HStack(spacing: 8) {
-                    Text("WATER LEVEL MONITOR · AUSTIN, TX")
+                    Text("AUSTIN, TX")
                         .font(AppFont.body(10.5, weight: .semibold))
                         .tracking(0.4)
                         .foregroundStyle(theme.textMuted(0.45))

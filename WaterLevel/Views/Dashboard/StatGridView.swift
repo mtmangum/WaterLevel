@@ -83,7 +83,7 @@ struct StatGridView: View {
             } detail: {
                 if let r = latest {
                     HStack(spacing: 5) {
-                        Text(String(format: "%.1f%%", r.percentFull))
+                        Text(String(format: "%.1f%% full", r.percentFull))
                             .foregroundStyle(theme.textMuted(0.55))
                         if let rising = trendDirection {
                             Image(systemName: rising ? "arrow.up" : "arrow.down")

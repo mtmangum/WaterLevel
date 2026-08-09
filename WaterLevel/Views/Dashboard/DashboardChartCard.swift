@@ -3,8 +3,8 @@
 //  WaterLevel
 //
 //  Jan–Dec overlay chart showing 2022–2026 as individually toggleable year lines.
-//  2026 uses live daily readings (monthly averages → Catmull-Rom bezier).
-//  2022–2025 use static representative curves.
+//  All year lines use actual daily readings from historicalReadings / readings.
+//  2022–2025 fall back to static placeholder curves while the full CSV loads.
 //  Drag horizontally to zoom into a time range; RESET to restore full view.
 //  Y-axis scales dynamically to the data range of the currently visible series.
 //
@@ -29,11 +29,11 @@ private let staticYearSeries: [YearSeries] = [
     YearSeries(
         year: "2025",
         color: Theme.neutral500,
-        start: CGPoint(x: 40, y: 150),
+        start: CGPoint(x: 80, y: 150),
         curves: [
-            CubicSegment(c1: CGPoint(x: 100, y: 148), c2: CGPoint(x: 200, y: 130), end: CGPoint(x: 300, y: 108)),
-            CubicSegment(c1: CGPoint(x: 400, y: 96),  c2: CGPoint(x: 500, y: 116), end: CGPoint(x: 600, y: 150)),
-            CubicSegment(c1: CGPoint(x: 700, y: 182), c2: CGPoint(x: 800, y: 196), end: CGPoint(x: 900, y: 186)),
+            CubicSegment(c1: CGPoint(x: 140, y: 148), c2: CGPoint(x: 240, y: 130), end: CGPoint(x: 340, y: 108)),
+            CubicSegment(c1: CGPoint(x: 440, y: 96),  c2: CGPoint(x: 540, y: 116), end: CGPoint(x: 640, y: 150)),
+            CubicSegment(c1: CGPoint(x: 740, y: 182), c2: CGPoint(x: 840, y: 196), end: CGPoint(x: 940, y: 186)),
         ],
         end: CGPoint(x: 1000, y: 176),
         dotPosition: nil
@@ -41,11 +41,11 @@ private let staticYearSeries: [YearSeries] = [
     YearSeries(
         year: "2024",
         color: Theme.neutral600,
-        start: CGPoint(x: 40, y: 142),
+        start: CGPoint(x: 80, y: 142),
         curves: [
-            CubicSegment(c1: CGPoint(x: 100, y: 136), c2: CGPoint(x: 200, y: 124), end: CGPoint(x: 300, y: 150)),
-            CubicSegment(c1: CGPoint(x: 400, y: 178), c2: CGPoint(x: 500, y: 168), end: CGPoint(x: 600, y: 142)),
-            CubicSegment(c1: CGPoint(x: 700, y: 120), c2: CGPoint(x: 800, y: 130), end: CGPoint(x: 900, y: 150)),
+            CubicSegment(c1: CGPoint(x: 140, y: 136), c2: CGPoint(x: 240, y: 124), end: CGPoint(x: 340, y: 150)),
+            CubicSegment(c1: CGPoint(x: 440, y: 178), c2: CGPoint(x: 540, y: 168), end: CGPoint(x: 640, y: 142)),
+            CubicSegment(c1: CGPoint(x: 740, y: 120), c2: CGPoint(x: 840, y: 130), end: CGPoint(x: 940, y: 150)),
         ],
         end: CGPoint(x: 1000, y: 158),
         dotPosition: nil
@@ -53,11 +53,11 @@ private let staticYearSeries: [YearSeries] = [
     YearSeries(
         year: "2023",
         color: Theme.neutral700,
-        start: CGPoint(x: 40, y: 168),
+        start: CGPoint(x: 80, y: 168),
         curves: [
-            CubicSegment(c1: CGPoint(x: 100, y: 172), c2: CGPoint(x: 200, y: 160), end: CGPoint(x: 300, y: 132)),
-            CubicSegment(c1: CGPoint(x: 400, y: 112), c2: CGPoint(x: 500, y: 124), end: CGPoint(x: 600, y: 162)),
-            CubicSegment(c1: CGPoint(x: 700, y: 194), c2: CGPoint(x: 800, y: 206), end: CGPoint(x: 900, y: 198)),
+            CubicSegment(c1: CGPoint(x: 140, y: 172), c2: CGPoint(x: 240, y: 160), end: CGPoint(x: 340, y: 132)),
+            CubicSegment(c1: CGPoint(x: 440, y: 112), c2: CGPoint(x: 540, y: 124), end: CGPoint(x: 640, y: 162)),
+            CubicSegment(c1: CGPoint(x: 740, y: 194), c2: CGPoint(x: 840, y: 206), end: CGPoint(x: 940, y: 198)),
         ],
         end: CGPoint(x: 1000, y: 188),
         dotPosition: nil
@@ -65,11 +65,11 @@ private let staticYearSeries: [YearSeries] = [
     YearSeries(
         year: "2022",
         color: Theme.neutral800,
-        start: CGPoint(x: 40, y: 138),
+        start: CGPoint(x: 80, y: 138),
         curves: [
-            CubicSegment(c1: CGPoint(x: 100, y: 132), c2: CGPoint(x: 200, y: 118), end: CGPoint(x: 300, y: 142)),
-            CubicSegment(c1: CGPoint(x: 400, y: 162), c2: CGPoint(x: 500, y: 148), end: CGPoint(x: 600, y: 132)),
-            CubicSegment(c1: CGPoint(x: 700, y: 122), c2: CGPoint(x: 800, y: 136), end: CGPoint(x: 900, y: 158)),
+            CubicSegment(c1: CGPoint(x: 140, y: 132), c2: CGPoint(x: 240, y: 118), end: CGPoint(x: 340, y: 142)),
+            CubicSegment(c1: CGPoint(x: 440, y: 162), c2: CGPoint(x: 540, y: 148), end: CGPoint(x: 640, y: 132)),
+            CubicSegment(c1: CGPoint(x: 740, y: 122), c2: CGPoint(x: 840, y: 136), end: CGPoint(x: 940, y: 158)),
         ],
         end: CGPoint(x: 1000, y: 166),
         dotPosition: nil
@@ -79,28 +79,20 @@ private let staticYearSeries: [YearSeries] = [
 private let placeholder2026 = YearSeries(
     year: "2026",
     color: Theme.water,
-    start: CGPoint(x: 40, y: 146),
+    start: CGPoint(x: 80, y: 146),
     curves: [
-        CubicSegment(c1: CGPoint(x: 100, y: 150), c2: CGPoint(x: 200, y: 152), end: CGPoint(x: 300, y: 120)),
-        CubicSegment(c1: CGPoint(x: 400, y: 84),  c2: CGPoint(x: 490, y: 105), end: CGPoint(x: 560, y: 118)),
+        CubicSegment(c1: CGPoint(x: 140, y: 150), c2: CGPoint(x: 240, y: 152), end: CGPoint(x: 340, y: 120)),
+        CubicSegment(c1: CGPoint(x: 440, y: 84),  c2: CGPoint(x: 530, y: 105), end: CGPoint(x: 600, y: 118)),
     ],
-    end: CGPoint(x: 560, y: 118),
-    dotPosition: CGPoint(x: 560, y: 118)
+    end: CGPoint(x: 600, y: 118),
+    dotPosition: CGPoint(x: 600, y: 118)
 )
 
-private let chartAvgStart = CGPoint(x: 40, y: 120)
-private let chartAvgCurves: [CubicSegment] = [
-    CubicSegment(c1: CGPoint(x: 100, y: 116), c2: CGPoint(x: 200, y: 112), end: CGPoint(x: 300, y: 100)),
-    CubicSegment(c1: CGPoint(x: 400, y: 90),  c2: CGPoint(x: 500, y: 96),  end: CGPoint(x: 600, y: 118)),
-    CubicSegment(c1: CGPoint(x: 700, y: 140), c2: CGPoint(x: 800, y: 150), end: CGPoint(x: 900, y: 146)),
-]
-private let chartAvgEnd = CGPoint(x: 1000, y: 142)
-
-// All 12 month label positions (start of each month zone in SVG x)
+// Month label positions: left edge of each month zone in SVG x (data starts at x=40 = Jan 1)
 private let allMonthLabels: [(x: CGFloat, label: String)] = [
-    (0, "JAN"), (80, "FEB"), (160, "MAR"), (240, "APR"),
-    (320, "MAY"), (400, "JUN"), (480, "JUL"), (560, "AUG"),
-    (640, "SEP"), (720, "OCT"), (800, "NOV"), (880, "DEC"),
+    (40, "JAN"), (120, "FEB"), (200, "MAR"), (280, "APR"),
+    (360, "MAY"), (440, "JUN"), (520, "JUL"), (600, "AUG"),
+    (680, "SEP"), (760, "OCT"), (840, "NOV"), (920, "DEC"),
 ]
 
 // Fixed SVG-y ↔ ft mapping (absolute lake level coordinates, independent of display zoom).
@@ -112,7 +104,7 @@ private func ftToSvgY(_ ft: Double) -> CGFloat {
     34.0 + CGFloat(681.0 - ft) * (192.0 / 76.0)
 }
 private func monthToSvgX(_ month: Int) -> CGFloat {
-    (CGFloat(month) - 0.5) * 80
+    40.0 + CGFloat(month - 1) * 80.0   // left edge of each month zone (Jan 1 = 40)
 }
 
 private let kAvg = "30-YR AVG"
@@ -131,7 +123,7 @@ struct DashboardChartCard: View {
     @State private var selectionEnd: CGFloat? = nil
 
     private var isZoomed: Bool { zoomRange.lowerBound > 1 || zoomRange.upperBound < 999 }
-    private var allSeries: [YearSeries] { [live2026] + staticYearSeries }
+    private var allSeries: [YearSeries] { [live2026] + historicalYearSeries }
     private var allSeriesIDs: [String] { allSeries.map(\.year) + [kAvg] }
 
     // MARK: - Dynamic Y-axis range
@@ -154,26 +146,30 @@ struct DashboardChartCard: View {
         for series in allSeries where !hiddenSeries.contains(series.year) {
             extend(series.start)
             let n = CGFloat(series.curves.count)
-            for i in 1...120 { extend(evalBezier(series.curves, start: series.start, t: CGFloat(i) / 120 * n)) }
+            let samples = max(200, series.curves.count)
+            for i in 1...samples { extend(evalBezier(series.curves, start: series.start, t: CGFloat(i) / CGFloat(samples) * n)) }
             extend(series.end)
         }
-        if !hiddenSeries.contains(kAvg) {
-            extend(chartAvgStart)
-            let n = CGFloat(chartAvgCurves.count)
-            for i in 1...120 { extend(evalBezier(chartAvgCurves, start: chartAvgStart, t: CGFloat(i) / 120 * n)) }
-            extend(chartAvgEnd)
+        if !hiddenSeries.contains(kAvg), let avg = avgSeries {
+            extend(avg.start)
+            let n = CGFloat(avg.curves.count)
+            let samples = max(60, avg.curves.count)
+            for i in 1...samples { extend(evalBezier(avg.curves, start: avg.start, t: CGFloat(i) / CGFloat(samples) * n)) }
+            extend(avg.end)
         }
         guard foundData else { return 34...226 }
 
-        // Compute ft range with ±5 ft padding, clamped so we don't go meaninglessly above full pool
-        let highFt = min(682.0, svgYToFt(minSvgY) + 5.0)
-        let lowFt  = max(600.0, svgYToFt(maxSvgY) - 5.0)
+        // Compute ft range with ±5 ft padding.
+        // Upper: 710 ft (lake can flood above "full pool" 681 ft).
+        // Lower: 560 ft (well below any historical drought record).
+        let highFt = min(710.0, svgYToFt(minSvgY) + 5.0)
+        let lowFt  = max(560.0, svgYToFt(maxSvgY) - 5.0)
         let midFt  = (highFt + lowFt) / 2.0
         // Enforce minimum 8 ft span so tightly-bunched data doesn't over-zoom
         let halfSpan = max(4.0, (highFt - lowFt) / 2.0)
 
-        let topSvgY = ftToSvgY(min(682.0, midFt + halfSpan))
-        let botSvgY = ftToSvgY(max(600.0, midFt - halfSpan))
+        let topSvgY = ftToSvgY(min(710.0, midFt + halfSpan))
+        let botSvgY = ftToSvgY(max(560.0, midFt - halfSpan))
         return topSvgY...botSvgY
     }
 
@@ -187,12 +183,12 @@ struct DashboardChartCard: View {
 
         let step: Double
         switch span {
-        case ..<3:  step = 0.5
-        case ..<6:  step = 1
-        case ..<12: step = 2
-        case ..<25: step = 5
-        case ..<60: step = 10
-        default:    step = 20
+        case ..<3:   step = 0.5
+        case ..<6:   step = 1
+        case ..<12:  step = 2
+        case ..<25:  step = 5
+        case ..<150: step = 10
+        default:     step = 20
         }
 
         var ftSet = Set<Double>()
@@ -217,7 +213,7 @@ struct DashboardChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 10) {
-                Text("WATER LEVEL — 5-YEAR COMPARISON")
+                Text("WATER LEVEL")
                     .font(AppFont.body(14.5, weight: .heavy))
                     .tracking(0.2)
 
@@ -248,8 +244,8 @@ struct DashboardChartCard: View {
                 ZStack {
                     gridlines(size: size, yr: yr)
 
-                    if !hiddenSeries.contains(kAvg) {
-                        svgPath(start: chartAvgStart, curves: chartAvgCurves, lineTo: chartAvgEnd,
+                    if !hiddenSeries.contains(kAvg), let avg = avgSeries {
+                        svgPath(start: avg.start, curves: avg.curves, lineTo: avg.end,
                                 size: size, xRange: zoomRange, yRange: yr)
                             .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
                     }
@@ -278,7 +274,7 @@ struct DashboardChartCard: View {
                     // Month labels pinned to the screen bottom regardless of y zoom
                     ForEach(Array(allMonthLabels.enumerated()), id: \.offset) { _, lbl in
                         if lbl.x < zoomRange.upperBound && (lbl.x + 80) > zoomRange.lowerBound {
-                            let screenX = (lbl.x + 40 - zoomRange.lowerBound) / xSpan * size.width
+                            let screenX = (lbl.x - zoomRange.lowerBound) / xSpan * size.width
                             Text(lbl.label)
                                 .font(AppFont.body(11))
                                 .foregroundStyle(theme.textMuted(0.55))
@@ -339,33 +335,83 @@ struct DashboardChartCard: View {
         .overlay(Rectangle().strokeBorder(theme.divider, lineWidth: 2))
     }
 
-    // MARK: - Live 2026 series
+    // MARK: - Live series
 
     private var live2026: YearSeries {
-        let readings2026 = appState.readings.filter { $0.year == 2026 }
-        guard readings2026.count >= 2 else { return placeholder2026 }
+        let r = appState.readings.filter { $0.year == 2026 }
+        return seriesFromDailyReadings(r, year: "2026", color: Theme.water, dotAtEnd: true)
+            ?? placeholder2026
+    }
 
-        var monthAvgs: [(month: Int, level: Double)] = []
-        for month in 1...12 {
-            let monthly = readings2026.filter { $0.month == month }
-            guard !monthly.isEmpty else { continue }
-            let avg = monthly.map(\.waterLevel).reduce(0, +) / Double(monthly.count)
-            monthAvgs.append((month: month, level: avg))
+    private var historicalYearSeries: [YearSeries] {
+        let config: [(year: Int, color: Color)] = [
+            (2025, Theme.neutral500),
+            (2024, Theme.neutral600),
+            (2023, Theme.neutral700),
+            (2022, Theme.neutral800),
+        ]
+        return config.compactMap { (year, color) in
+            if let r = appState.chartYearDailyReadings[year], r.count >= 2 {
+                return seriesFromDailyReadings(r, year: "\(year)", color: color)
+            }
+            return staticYearSeries.first(where: { $0.year == "\(year)" })
         }
-        guard monthAvgs.count >= 2 else { return placeholder2026 }
+    }
 
-        let pts = monthAvgs.map { ma in CGPoint(x: monthToSvgX(ma.month), y: ftToSvgY(ma.level)) }
+    private var avgSeries: YearSeries? {
+        seriesFromMonthlyAvgs(appState.thirtyYearMonthlyAvgs, color: theme.chartAvgLine)
+    }
 
-        var segments: [CubicSegment] = []
+    // MARK: - Series builders (Catmull-Rom → cubic bezier)
+
+    private func readingToSvgX(month: Int, day: Int) -> CGFloat {
+        let dims: [CGFloat] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        let dm = dims[max(0, min(11, month - 1))]
+        // 40 left offset so Jan 1 aligns with the gridline left edge
+        return 40.0 + CGFloat(month - 1) * 80.0 + CGFloat(day - 1) / dm * 80.0
+    }
+
+    private func buildSegments(pts: [CGPoint]) -> [CubicSegment] {
+        guard pts.count >= 2 else { return [] }
+        var segs: [CubicSegment] = []
         for i in 0..<pts.count - 1 {
             let p0 = pts[max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[min(pts.count - 1, i + 2)]
             let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
             let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
-            segments.append(CubicSegment(c1: c1, c2: c2, end: p2))
+            segs.append(CubicSegment(c1: c1, c2: c2, end: p2))
         }
-        return YearSeries(year: "2026", color: Theme.water,
-                          start: pts[0], curves: segments,
-                          end: pts.last!, dotPosition: pts.last)
+        return segs
+    }
+
+    private func seriesFromDailyReadings(
+        _ readings: [DailyReading],
+        year: String,
+        color: Color,
+        dotAtEnd: Bool = false
+    ) -> YearSeries? {
+        guard readings.count >= 2 else { return nil }
+        let pts = readings.map { r in
+            CGPoint(x: readingToSvgX(month: r.month, day: r.day), y: ftToSvgY(r.waterLevel))
+        }
+        let segs = buildSegments(pts: pts)
+        return YearSeries(year: year, color: color,
+                          start: pts[0], curves: segs,
+                          end: pts.last!, dotPosition: dotAtEnd ? pts.last : nil)
+    }
+
+    private func seriesFromMonthlyAvgs(
+        _ avgs: [(month: Int, level: Double)],
+        color: Color
+    ) -> YearSeries? {
+        guard avgs.count >= 2 else { return nil }
+        var pts = avgs.map { CGPoint(x: monthToSvgX($0.month), y: ftToSvgY($0.level)) }
+        // Extend to Dec 31 (x=1000) so the avg line spans the same range as the year lines
+        let decLevel = avgs.first(where: { $0.month == 12 })?.level ?? avgs.last!.level
+        pts.append(CGPoint(x: 1000, y: ftToSvgY(decLevel)))
+        let segs = buildSegments(pts: pts)
+        return YearSeries(year: kAvg, color: color,
+                          start: pts[0], curves: segs,
+                          end: pts.last!, dotPosition: nil)
     }
 
     // MARK: - Legend
@@ -489,9 +535,10 @@ struct DashboardChartCard: View {
 
     private func levelY(for series: YearSeries, atSvgX targetX: CGFloat) -> CGFloat? {
         let segCount = CGFloat(series.curves.count)
+        let sampleCount = max(600, series.curves.count * 2)
         var prev = series.start
-        for i in 1...300 {
-            let pt = evalBezier(series.curves, start: series.start, t: CGFloat(i) / 300 * segCount)
+        for i in 1...sampleCount {
+            let pt = evalBezier(series.curves, start: series.start, t: CGFloat(i) / CGFloat(sampleCount) * segCount)
             if prev.x <= targetX && pt.x >= targetX {
                 let dx = pt.x - prev.x
                 return prev.y + (dx == 0 ? 0 : (targetX - prev.x) / dx) * (pt.y - prev.y)
@@ -509,9 +556,11 @@ struct DashboardChartCard: View {
     private func dateLabel(atSvgX x: CGFloat) -> String {
         let months      = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"]
         let daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        let idx = max(0, min(11, Int(x / 80)))
-        let pos = (x - CGFloat(idx * 80)) / 80.0
-        let day = max(1, min(daysInMonth[idx], Int(pos * CGFloat(daysInMonth[idx])) + 1))
+        let adjusted    = max(0, x - 40.0)
+        let idx         = max(0, min(11, Int(adjusted / 80)))
+        let dm          = daysInMonth[idx]
+        let pos         = (adjusted - CGFloat(idx * 80)) / 80.0
+        let day         = max(1, min(dm, Int(pos * CGFloat(dm)) + 1))
         return "\(months[idx]) \(day)"
     }
 

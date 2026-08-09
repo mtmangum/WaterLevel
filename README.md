@@ -2,6 +2,8 @@
 
 A native macOS app for monitoring real-time and historical water levels for Lake Travis, Austin TX.
 
+![WaterLevel dark mode](screenshots/app-dark.png)
+
 ## Features
 
 - **Dashboard** — current lake level, inflow, outflow, and vs-historical-average stats
@@ -17,13 +19,12 @@ Flat modernist system: SF Pro Heavy/Bold, zero corner radius, 2px rule dividers,
 
 ## Data
 
-Currently uses static placeholder data. Intended live source: LCRA Hydromet API.
+Live daily readings from [waterdatafortexas.org](https://waterdatafortexas.org/) (LCRA). Both the trailing-year CSV and the full historical record (since 1940) are fetched on launch and cached to disk so the chart renders instantly on subsequent opens.
 
 | Constant | Value |
 |---|---|
 | Full pool | 681 ft MSL |
 | Low-level threshold | 605 ft MSL |
-| Current level (placeholder) | 638.4 ft |
 
 ## Requirements
 

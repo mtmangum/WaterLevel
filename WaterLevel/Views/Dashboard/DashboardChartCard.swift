@@ -4,7 +4,6 @@
 //
 //  Jan–Dec overlay chart showing 2022–2026 as individually toggleable year lines.
 //  All year lines use actual daily readings from historicalReadings / readings.
-//  2022–2025 fall back to static placeholder curves while the full CSV loads.
 //  Drag horizontally to zoom into a time range; RESET to restore full view.
 //  Y-axis scales dynamically to the data range of the currently visible series.
 //
@@ -22,59 +21,6 @@ private struct YearSeries: Identifiable {
     let end: CGPoint
     let dotPosition: CGPoint?
 }
-
-// MARK: - Static chart data (2022–2025)
-
-private let staticYearSeries: [YearSeries] = [
-    YearSeries(
-        year: "2025",
-        color: Theme.neutral500,
-        start: CGPoint(x: 80, y: 150),
-        curves: [
-            CubicSegment(c1: CGPoint(x: 140, y: 148), c2: CGPoint(x: 240, y: 130), end: CGPoint(x: 340, y: 108)),
-            CubicSegment(c1: CGPoint(x: 440, y: 96),  c2: CGPoint(x: 540, y: 116), end: CGPoint(x: 640, y: 150)),
-            CubicSegment(c1: CGPoint(x: 740, y: 182), c2: CGPoint(x: 840, y: 196), end: CGPoint(x: 940, y: 186)),
-        ],
-        end: CGPoint(x: 1000, y: 176),
-        dotPosition: nil
-    ),
-    YearSeries(
-        year: "2024",
-        color: Theme.neutral600,
-        start: CGPoint(x: 80, y: 142),
-        curves: [
-            CubicSegment(c1: CGPoint(x: 140, y: 136), c2: CGPoint(x: 240, y: 124), end: CGPoint(x: 340, y: 150)),
-            CubicSegment(c1: CGPoint(x: 440, y: 178), c2: CGPoint(x: 540, y: 168), end: CGPoint(x: 640, y: 142)),
-            CubicSegment(c1: CGPoint(x: 740, y: 120), c2: CGPoint(x: 840, y: 130), end: CGPoint(x: 940, y: 150)),
-        ],
-        end: CGPoint(x: 1000, y: 158),
-        dotPosition: nil
-    ),
-    YearSeries(
-        year: "2023",
-        color: Theme.neutral700,
-        start: CGPoint(x: 80, y: 168),
-        curves: [
-            CubicSegment(c1: CGPoint(x: 140, y: 172), c2: CGPoint(x: 240, y: 160), end: CGPoint(x: 340, y: 132)),
-            CubicSegment(c1: CGPoint(x: 440, y: 112), c2: CGPoint(x: 540, y: 124), end: CGPoint(x: 640, y: 162)),
-            CubicSegment(c1: CGPoint(x: 740, y: 194), c2: CGPoint(x: 840, y: 206), end: CGPoint(x: 940, y: 198)),
-        ],
-        end: CGPoint(x: 1000, y: 188),
-        dotPosition: nil
-    ),
-    YearSeries(
-        year: "2022",
-        color: Theme.neutral800,
-        start: CGPoint(x: 80, y: 138),
-        curves: [
-            CubicSegment(c1: CGPoint(x: 140, y: 132), c2: CGPoint(x: 240, y: 118), end: CGPoint(x: 340, y: 142)),
-            CubicSegment(c1: CGPoint(x: 440, y: 162), c2: CGPoint(x: 540, y: 148), end: CGPoint(x: 640, y: 132)),
-            CubicSegment(c1: CGPoint(x: 740, y: 122), c2: CGPoint(x: 840, y: 136), end: CGPoint(x: 940, y: 158)),
-        ],
-        end: CGPoint(x: 1000, y: 166),
-        dotPosition: nil
-    ),
-]
 
 private let placeholder2026 = YearSeries(
     year: "2026",
@@ -351,10 +297,8 @@ struct DashboardChartCard: View {
             (2022, Theme.neutral800),
         ]
         return config.compactMap { (year, color) in
-            if let r = appState.chartYearDailyReadings[year], r.count >= 2 {
-                return seriesFromDailyReadings(r, year: "\(year)", color: color)
-            }
-            return staticYearSeries.first(where: { $0.year == "\(year)" })
+            guard let r = appState.chartYearDailyReadings[year], r.count >= 2 else { return nil }
+            return seriesFromDailyReadings(r, year: "\(year)", color: color)
         }
     }
 

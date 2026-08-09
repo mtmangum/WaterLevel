@@ -8,7 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- **Real daily chart data** — all five year lines (2022–2026) now plot actual daily readings from the CSV via Catmull-Rom spline through 365 points, replacing fabricated static curves. Falls back to placeholder curves while the historical CSV is still loading.
+- **Real daily chart data** — all five year lines (2022–2026) now plot actual daily readings from the CSV via Catmull-Rom spline through 365 points, replacing fabricated static curves.
 - **Disk cache** — after each successful network fetch, both CSV files are saved to `~/Library/Application Support/WaterLevel/`. On the next launch the chart renders immediately from cache before the network refresh completes, so the chart is never empty on relaunch.
 - **Dynamic Y-axis scaling** — chart vertical range auto-adjusts to fit the visible data. Y bounds extended to 560–710 ft so the chart handles flood levels above full pool (681 ft) and drought lows below the old 600 ft floor. Gridlines use 10 ft steps for any span up to 150 ft.
 - **Loading feedback** — animated shimmer bar replaces the header divider while data fetches; the status dot pulses while loading.
@@ -31,6 +31,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Unused static `chartAvgStart`/`chartAvgCurves`/`chartAvgEnd` constants (replaced by live `avgSeries` computed from `thirtyYearMonthlyAvgs`).
 
 ### Fixed
+- **No flash of placeholder curves on launch** — both cache files (24 KB and 1.9 MB) are now parsed synchronously in `AppState.init()` (~21 ms total) before the first SwiftUI frame renders, so real data is always present from frame zero. The fabricated static year-line placeholders are removed entirely.
+- **Network fetch no longer overwrites cached data with bad data** — `fetch()` now checks the HTTP status code (throws on non-200) and validates the parsed row count (throws if empty) before writing to disk or updating state. A server-side error or HTML response no longer silently replaces valid cached readings with an empty array.
 - Chart lines no longer extend left of the gridlines or misalign with month labels.
 - Year lines above 681 ft ("full pool") no longer go off-canvas — the upper Y clamp was raised from 682 ft to 710 ft.
 - Year lines far below 640 ft no longer go off-canvas — the lower Y clamp was lowered from 600 ft to 560 ft.

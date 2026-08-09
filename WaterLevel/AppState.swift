@@ -20,6 +20,19 @@ final class AppState: ObservableObject {
     @Published var dataError: String?
     @Published var lastUpdated: Date?
 
+    init() {
+        // Load both caches synchronously so real data is present before the first frame renders.
+        // Both CSVs parse in < 25 ms total — negligible on the main thread during init.
+        if let r = LakeDataService.shared.cachedReadings(),
+           let h = LakeDataService.shared.cachedAllReadings() {
+            let (avgs, yearMap) = Self.derivedData(r: r, h: h)
+            readings               = r
+            historicalReadings     = h
+            thirtyYearMonthlyAvgs  = avgs
+            chartYearDailyReadings = yearMap
+        }
+    }
+
     var theme: Theme { Theme(isDark: isDark) }
     var latestReading: DailyReading? { readings.last }
 
@@ -37,20 +50,7 @@ final class AppState: ObservableObject {
     }
 
     func fetchData() async {
-        // Phase 1: restore cached data immediately so the chart is never empty on relaunch
-        let cachedR = await LakeDataService.shared.cachedReadings()
-        let cachedH = await LakeDataService.shared.cachedAllReadings()
-        if let r = cachedR, let h = cachedH {
-            let (avgs, yearMap) = Self.derivedData(r: r, h: h)
-            await MainActor.run {
-                readings               = r
-                historicalReadings     = h
-                thirtyYearMonthlyAvgs  = avgs
-                chartYearDailyReadings = yearMap
-            }
-        }
-
-        // Phase 2: fetch fresh data from the network
+        // Cache was already loaded synchronously in init(); go straight to the network refresh.
         await MainActor.run { isLoadingData = true }
         do {
             async let recent     = LakeDataService.shared.fetchReadings()

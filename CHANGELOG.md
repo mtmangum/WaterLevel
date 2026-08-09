@@ -8,24 +8,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- **Dynamic Y-axis scaling** — chart vertical range auto-adjusts to fit only the visible series within the current x-zoom window. Toggling years off or zooming in compresses the Y scale to focus on the relevant data. Gridlines regenerate at nice ft intervals (0.5–20 ft steps). 681 ft (full pool) and 605 ft (low threshold) always appear as accent lines when in range.
+- **Real daily chart data** — all five year lines (2022–2026) now plot actual daily readings from the CSV via Catmull-Rom spline through 365 points, replacing fabricated static curves. Falls back to placeholder curves while the historical CSV is still loading.
+- **Disk cache** — after each successful network fetch, both CSV files are saved to `~/Library/Application Support/WaterLevel/`. On the next launch the chart renders immediately from cache before the network refresh completes, so the chart is never empty on relaunch.
+- **Dynamic Y-axis scaling** — chart vertical range auto-adjusts to fit the visible data. Y bounds extended to 560–710 ft so the chart handles flood levels above full pool (681 ft) and drought lows below the old 600 ft floor. Gridlines use 10 ft steps for any span up to 150 ft.
 - **Loading feedback** — animated shimmer bar replaces the header divider while data fetches; the status dot pulses while loading.
 - **Stat grid contextual details** — each cell now shows a second line of context:
-  - **CURRENT LEVEL** — % full + ↑ Rising / ↓ Falling indicator (colored blue or red).
+  - **CURRENT LEVEL** — X.X% full + ↑ Rising / ↓ Falling indicator (colored blue or red).
   - **INFLOW** — ±% vs yesterday when net inflow two days running; otherwise ↓ X cfs outbound when lake is losing storage.
   - **OUTFLOW** — "NET DAILY" label clarifying the figure is net.
   - **30-YR HISTORICAL AVG** (renamed from VS 30-YR AVG) — shows the actual historical average level in ft as context for the ± delta.
-- **Live LCRA data** — `LakeDataService` actor fetches daily readings from `waterdatafortexas.org` CSV on app launch. Current Level and Capacity in the stat grid now show real values; the 2026 chart line is built from actual monthly averages via Catmull-Rom spline (falls back to placeholder while loading).
 - **`WaterLevel.entitlements`** — `com.apple.security.network.client` entitlement added so the sandboxed app can make outbound HTTPS requests.
 - **Header sync label** — shows "FETCHING DATA…" during load then "SYNCED JUST NOW / Xm AGO" from `AppState.lastUpdated`.
 
 ### Changed
-- **Stat grid** — CAPACITY cell removed; its % full info moved into the CURRENT LEVEL detail row. All cells now use a consistent label + value + detail structure (invisible placeholder preserves alignment when detail is empty).
-- **Month labels** — centered within each month zone (was offset 12px from zone left edge).
+- **Chart x-axis alignment** — January 1 now aligns exactly with the gridline left edge; month labels sit at the left edge of each month zone rather than being centered.
+- **30-yr avg line** — extended to span Jan 1→Dec 31, matching the horizontal extent of the year lines.
+- **Stat grid** — CAPACITY cell removed; its % full info moved into the CURRENT LEVEL detail row, now shown as "X.X% full". All cells use a consistent label + value + detail structure.
 - **Top Y-axis label** — clamped to minimum 8pt from top edge so it never gets clipped.
 
+### Removed
+- `SidebarView.swift`, `HistoricalView.swift`, `HistoricalChartCard.swift` — dead code; sidebar was removed from the app and the historical chart card used fabricated static data.
+- Unused static `chartAvgStart`/`chartAvgCurves`/`chartAvgEnd` constants (replaced by live `avgSeries` computed from `thirtyYearMonthlyAvgs`).
+
 ### Fixed
-- Date parsing timezone bug: CSV date strings ("2026-01-01") were parsed as midnight UTC then queried in local time (UTC−6 Austin), shifting year/month by up to a day. Fixed by extracting `year` and `month` integers directly from the date string, stored on `DailyReading`.
+- Chart lines no longer extend left of the gridlines or misalign with month labels.
+- Year lines above 681 ft ("full pool") no longer go off-canvas — the upper Y clamp was raised from 682 ft to 710 ft.
+- Year lines far below 640 ft no longer go off-canvas — the lower Y clamp was lowered from 600 ft to 560 ft.
+- Date parsing: `DailyReading` now stores `day: Int` extracted directly from the CSV date string.
 
 ---
 

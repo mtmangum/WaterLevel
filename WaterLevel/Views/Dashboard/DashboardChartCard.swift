@@ -575,7 +575,7 @@ struct DashboardChartCard: View {
                 let screenY = (gl.svgY - yr.lowerBound) / ySpan * size.height
                 ZStack(alignment: .topLeading) {
                     Path { p in
-                        p.move(to: CGPoint(x: startX, y: screenY))
+                        p.move(to: CGPoint(x: 0, y: screenY))
                         p.addLine(to: CGPoint(x: size.width, y: screenY))
                     }
                     .stroke(gl.isAccent ? theme.accent : theme.divider,

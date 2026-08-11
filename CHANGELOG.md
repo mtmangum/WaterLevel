@@ -7,7 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-10
+
 ### Fixed
+- **Chart y-axis overlay** — y-axis labels now overlay the left edge of the plot instead of reserving a separate gutter column, so the chart uses the full available width; on phone-width screens the axis numbers are hidden entirely rather than squeezed into a narrow column.
 - **Netlify CSV proxy function crashing (502)** — `lake-csv.js` used CommonJS `exports.handler` while `package.json` declares `"type": "module"`, so Node refused to load it, breaking all chart data on the deployed site. Converted to `export async function handler(event)`.
 - **Chart legend overflow on mobile** — the "WATER LEVEL" title + year-toggle legend (2026/2025/2024/2023/2022/30-YR AVG) shared one non-wrapping row, so on phone widths only the first two legend badges were visible/tappable and the rest overflowed off-screen. Row now wraps, with the legend dropping to its own line under 640px.
 - **Chart left-alignment at all sizes** — the "WATER LEVEL" title/legend row was pinned to the plot's y-axis gutter width instead of the stat grid's own inset, leaving the chart visibly indented past "OUTFLOW" and the other stat cells at every screen size, not just mobile. Title/legend now matches the stat grid's padding directly (16px desktop, 12px under 640px) independent of the y-axis gutter, and the gutter itself narrowed (44→36px desktop, 30px on phone-width charts) to tighten the plot's left edge too — it can't fully match the stat grid's inset without clipping 4-digit lake elevations, but it's much closer.

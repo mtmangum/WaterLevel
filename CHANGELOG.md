@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Gridlines running behind y-axis labels** — dashed gridlines started at the chart's left edge (x=0), the same position as the overlaid y-axis numbers, so lines ran directly through the label text. Gridlines now start after the label column when the axis is shown.
+
 ## [1.0.0] — 2026-08-10
 
 ### Fixed

@@ -1,6 +1,9 @@
 # LakeLevel
 
-A native macOS app for monitoring real-time and historical water levels for all six LCRA Highland Lakes in Texas. A React/Vite web port is also live at **[highlandlakelevels.org](https://highlandlakelevels.org)**.
+LakeLevel monitors real-time and historical water levels for all six LCRA Highland Lakes in Texas. It ships as two apps sharing one design and one data source:
+
+- **macOS app** — native SwiftUI, see [macOS App](#macos-app)
+- **Web app** — live at **[highlandlakelevels.org](https://highlandlakelevels.org)**, React/Vite/TypeScript, see [Web App](#web-app)
 
 ![LakeLevel dark mode](screenshots/app-dark.png)
 
@@ -14,11 +17,11 @@ A native macOS app for monitoring real-time and historical water levels for all 
 - **Drag to zoom** — drag across the chart to zoom into a date range; RESET to restore full view
 - **Annual Summary popover** — header button opens a live min/max/avg/year-end table for the selected lake
 - **Dark / Light mode** — toggled from the header; default is dark
-- **Disk cache** — chart renders instantly from cache on relaunch; network refresh runs in the background
+- **Disk cache** (macOS) — chart renders instantly from cache on relaunch; network refresh runs in the background
 
 ## Design
 
-Flat modernist system: SF Pro Heavy/Bold, zero corner radius, 1 px rule dividers, neutral ramp + `#2B82D4` water blue + `#EC3013` accent red. Tokens defined in `Theme.swift`.
+Flat modernist system: SF Pro Heavy/Bold, zero corner radius, 1 px rule dividers, neutral ramp + `#2B82D4` water blue + `#EC3013` accent red. Tokens defined in `Theme.swift` (macOS) and `theme.ts` (web).
 
 ## Data
 
@@ -33,12 +36,14 @@ Live daily readings from [waterdatafortexas.org](https://waterdatafortexas.org/)
 | Lake Travis | 681.0 ft MSL |
 | Lake Austin | 492.0 ft MSL |
 
-## Requirements
+## macOS App
+
+### Requirements
 
 - macOS 26 or later
 - Xcode 26 or later
 
-## Project structure
+### Project structure
 
 ```
 WaterLevel/
@@ -64,20 +69,27 @@ WaterLevel/
             └── HistoricalTableView.swift — live annual summary table
 ```
 
-## Web app
+## Web App
 
-A React/Vite/TypeScript port of the same dashboard lives in `web/`, deployed to Netlify at [highlandlakelevels.org](https://highlandlakelevels.org). It mirrors the native app's feature set — lake picker, stat grid, 5-year overlay chart with crosshair/zoom/legend toggles, Annual Summary table — plus a mobile-responsive layout (stacking header/stat grid, touch-enabled chart, full-screen summary sheet under 640px) and shareable `?lake=` deep links.
+Live at **[highlandlakelevels.org](https://highlandlakelevels.org)**, built with React/Vite/TypeScript in `web/`. It mirrors the native app's feature set — lake picker, stat grid, 5-year overlay chart with crosshair/zoom/legend toggles, Annual Summary table — plus a mobile-responsive layout (stacking header/stat grid, touch-enabled chart, full-screen summary sheet under 640px) and shareable `?lake=` deep links.
 
-**Local development:**
+### Local development
+
 ```
 cd web
 npm install
 npm run dev
 ```
 
-**Data fetching:** a Netlify serverless function (`web/netlify/functions/lake-csv.js`) proxies CSV requests to waterdatafortexas.org to avoid CORS issues; the frontend calls it via the `/api/lake-csv` redirect defined in `web/netlify.toml`.
+### Data fetching
 
-**Deployment:** the Netlify site is linked to this GitHub repo (base directory `web`) — every push to `main` auto-builds and deploys. Manual deploys (`netlify deploy --prod` from `web/`) also work if needed.
+A Netlify serverless function (`web/netlify/functions/lake-csv.js`) proxies CSV requests to waterdatafortexas.org to avoid CORS issues; the frontend calls it via the `/api/lake-csv` redirect defined in `web/netlify.toml`.
+
+### Deployment
+
+The Netlify site is linked to this GitHub repo (base directory `web`) — every push to `main` auto-builds and deploys. Manual deploys (`netlify deploy --prod` from `web/`) also work if needed.
+
+### Project structure
 
 ```
 web/

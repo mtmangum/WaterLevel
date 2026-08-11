@@ -573,6 +573,7 @@ struct DashboardChartCard: View {
         return ZStack {
             ForEach(lines, id: \.ft) { gl in
                 let screenY = (gl.svgY - yr.lowerBound) / ySpan * size.height
+                if screenY <= size.height - 24 {   // skip gridlines that land in the month-label zone
                 ZStack(alignment: .topLeading) {
                     Path { p in
                         p.move(to: CGPoint(x: 0, y: screenY))
@@ -591,6 +592,7 @@ struct DashboardChartCard: View {
                         .fixedSize()
                         .position(x: startX / 2, y: max(8, screenY - 4))
                 }
+                } // end if screenY
             }
         }
     }

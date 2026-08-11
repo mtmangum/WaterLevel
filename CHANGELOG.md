@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Mobile-responsive web layout** — removed the hard-coded 860px minimum width that forced horizontal scrolling on phones. Header now wraps into two rows under 640px (title/picker, then actions spaced edge-to-edge). Stat grid collapses from a 4-across row into a 2×2 grid. Annual Summary panel becomes a full-screen sheet with a visible close button (previously only closable via backdrop click, unreachable once full-screen) and its table scrolls horizontally instead of squeezing five columns unreadably narrow. Chart now handles touch events (tap for tooltip, drag for zoom) alongside the existing mouse handlers, with `touch-action: none` so gestures don't fight page scrolling.
+
+### Added
+- **Web favicon** — SVG favicon matching the native app icon's water-level wave + marker dot motif and color palette (`web/public/favicon.svg`).
+
+### Changed
 - **Adaptive x-axis date labels** — chart x-axis granularity now scales with zoom level: monthly labels at full view, then bi-weekly → every 10 days → weekly → every 3 days → every 2 days → daily as the user zooms in. Labels in sub-monthly views use "MMM D" format (e.g. "JAN 15") at a slightly smaller size so context is always visible.
 - **Crosshair tooltip y-tracking** — tooltip now follows the cursor vertically (clamped to stay on canvas) instead of being fixed at a hardcoded y position. Horizontal offset increased from 80 to 90pt to clear the cursor and dots.
 

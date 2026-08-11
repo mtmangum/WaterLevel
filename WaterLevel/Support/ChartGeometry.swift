@@ -21,11 +21,12 @@ func svgPath(start: CGPoint,
              lineTo: CGPoint? = nil,
              size: CGSize,
              xRange: ClosedRange<CGFloat> = 0...1000,
-             yRange: ClosedRange<CGFloat> = 0...255) -> Path {
-    let sx = size.width  / (xRange.upperBound - xRange.lowerBound)
+             yRange: ClosedRange<CGFloat> = 0...255,
+             leftInset: CGFloat = 0) -> Path {
+    let sx = (size.width - leftInset) / (xRange.upperBound - xRange.lowerBound)
     let sy = size.height / (yRange.upperBound - yRange.lowerBound)
     func p(_ pt: CGPoint) -> CGPoint {
-        CGPoint(x: (pt.x - xRange.lowerBound) * sx,
+        CGPoint(x: leftInset + (pt.x - xRange.lowerBound) * sx,
                 y: (pt.y - yRange.lowerBound) * sy)
     }
     var path = Path()
@@ -40,10 +41,11 @@ func svgPath(start: CGPoint,
 func scaledPoint(_ pt: CGPoint,
                  size: CGSize,
                  xRange: ClosedRange<CGFloat> = 0...1000,
-                 yRange: ClosedRange<CGFloat> = 0...255) -> CGPoint {
-    let sx = size.width  / (xRange.upperBound - xRange.lowerBound)
+                 yRange: ClosedRange<CGFloat> = 0...255,
+                 leftInset: CGFloat = 0) -> CGPoint {
+    let sx = (size.width - leftInset) / (xRange.upperBound - xRange.lowerBound)
     let sy = size.height / (yRange.upperBound - yRange.lowerBound)
-    return CGPoint(x: (pt.x - xRange.lowerBound) * sx,
+    return CGPoint(x: leftInset + (pt.x - xRange.lowerBound) * sx,
                    y: (pt.y - yRange.lowerBound) * sy)
 }
 

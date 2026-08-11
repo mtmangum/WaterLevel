@@ -40,6 +40,8 @@ struct DashboardChartCard: View {
 
     private var lake: Lake { appState.selectedLake }
 
+    private let chartLeftInset: CGFloat = 32
+
     @State private var hiddenSeries: Set<String> = []
     @State private var hoverX: CGFloat? = nil
     @State private var hoverY: CGFloat? = nil
@@ -220,22 +222,22 @@ struct DashboardChartCard: View {
 
                     if !hiddenSeries.contains(kAvg), let avg = avgSeries {
                         svgPath(start: avg.start, curves: avg.curves, lineTo: avg.end,
-                                size: size, xRange: zoomRange, yRange: yr)
+                                size: size, xRange: zoomRange, yRange: yr, leftInset: chartLeftInset)
                             .stroke(theme.chartAvgLine, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
                     }
 
                     ForEach(Array(allSeries.reversed()), id: \.year) { series in
                         if !hiddenSeries.contains(series.year) {
                             svgPath(start: series.start, curves: series.curves, lineTo: series.end,
-                                    size: size, xRange: zoomRange, yRange: yr)
+                                    size: size, xRange: zoomRange, yRange: yr, leftInset: chartLeftInset)
                                 .stroke(series.color, style: StrokeStyle(
                                     lineWidth: series.year == "2026" ? 2.5 : 1.5,
                                     lineCap: .round
                                 ))
 
                             if let dot = series.dotPosition {
-                                let dotPt = scaledPoint(dot, size: size, xRange: zoomRange, yRange: yr)
-                                if dotPt.x >= 0 && dotPt.x <= size.width {
+                                let dotPt = scaledPoint(dot, size: size, xRange: zoomRange, yRange: yr, leftInset: chartLeftInset)
+                                if dotPt.x >= chartLeftInset && dotPt.x <= size.width {
                                     Circle()
                                         .fill(series.color)
                                         .frame(width: 9, height: 9)
@@ -247,7 +249,7 @@ struct DashboardChartCard: View {
 
                     // X-axis labels — granularity adapts to zoom level
                     ForEach(Array(visibleDateTicks.enumerated()), id: \.offset) { _, tick in
-                        let screenX = (tick.x - zoomRange.lowerBound) / xSpan * size.width
+                        let screenX = chartLeftInset + (tick.x - zoomRange.lowerBound) / xSpan * (size.width - chartLeftInset)
                         Text(tick.label)
                             .font(AppFont.body(tick.label.count > 3 ? 9.5 : 11))
                             .foregroundStyle(theme.textMuted(0.55))
@@ -291,8 +293,9 @@ struct DashboardChartCard: View {
                             let lo = min(start, v.location.x); let hi = max(start, v.location.x)
                             guard hi - lo > 15 else { return }
                             let span = zoomRange.upperBound - zoomRange.lowerBound
-                            let newLo = zoomRange.lowerBound + (lo / size.width) * span
-                            let newHi = zoomRange.lowerBound + (hi / size.width) * span
+                            let plotWidth = size.width - chartLeftInset
+                            let newLo = zoomRange.lowerBound + (max(0, lo - chartLeftInset) / plotWidth) * span
+                            let newHi = zoomRange.lowerBound + (max(0, hi - chartLeftInset) / plotWidth) * span
                             withAnimation(.easeInOut(duration: 0.18)) {
                                 zoomRange = max(0, newLo)...min(1000, newHi)
                             }
@@ -426,9 +429,10 @@ struct DashboardChartCard: View {
 
     @ViewBuilder
     private func crosshair(hx: CGFloat, hy: CGFloat, size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
-        let span     = zoomRange.upperBound - zoomRange.lowerBound
-        let svgX     = hx / size.width * span + zoomRange.lowerBound
-        let flipLeft = hx > size.width * 0.62
+        let span      = zoomRange.upperBound - zoomRange.lowerBound
+        let plotWidth = size.width - chartLeftInset
+        let svgX      = (hx - chartLeftInset) / plotWidth * span + zoomRange.lowerBound
+        let flipLeft  = (hx - chartLeftInset) > plotWidth * 0.62
 
         Path { p in
             p.move(to: CGPoint(x: hx, y: 0))
@@ -564,11 +568,8 @@ struct DashboardChartCard: View {
     // MARK: - Gridlines
 
     private func gridlines(size: CGSize, yr: ClosedRange<CGFloat>) -> some View {
-        let lines  = dynamicGridlines()
-        let ySpan  = yr.upperBound - yr.lowerBound
-        let leftX  = max(40, zoomRange.lowerBound)
-        let xSpan  = zoomRange.upperBound - zoomRange.lowerBound
-        let startX = (leftX - zoomRange.lowerBound) / xSpan * size.width
+        let lines = dynamicGridlines()
+        let ySpan = yr.upperBound - yr.lowerBound
 
         return ZStack {
             ForEach(lines, id: \.ft) { gl in
@@ -576,7 +577,7 @@ struct DashboardChartCard: View {
                 if screenY <= size.height - 24 {   // skip gridlines that land in the month-label zone
                 ZStack(alignment: .topLeading) {
                     Path { p in
-                        p.move(to: CGPoint(x: 0, y: screenY))
+                        p.move(to: CGPoint(x: chartLeftInset, y: screenY))
                         p.addLine(to: CGPoint(x: size.width, y: screenY))
                     }
                     .stroke(gl.isAccent ? theme.accent : theme.divider,
@@ -589,8 +590,9 @@ struct DashboardChartCard: View {
                     Text(label)
                         .font(AppFont.body(10.5, weight: gl.isAccent ? .bold : .regular))
                         .foregroundStyle(gl.isAccent ? theme.accent : theme.textMuted(0.35))
-                        .fixedSize()
-                        .position(x: startX / 2, y: max(8, screenY - 4))
+                        .lineLimit(1)
+                        .frame(width: chartLeftInset - 4, alignment: .leading)
+                        .position(x: (chartLeftInset - 4) / 2, y: max(8, screenY - 4))
                 }
                 } // end if screenY
             }

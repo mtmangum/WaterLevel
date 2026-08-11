@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Feet / meters unit toggle** — FT/M `SegmentedControl` in the header, next to DARK/LIGHT. All displayed levels (stat grid, chart y-axis, tooltips, Annual Summary table) convert from the source data's feet to meters and back; internal chart geometry stays in feet throughout, only display formatting changes. Gridline step sizes (0.5/1/2/5/10/20) are chosen in whichever unit is currently displayed, so meter mode gets its own nicely-rounded ticks instead of ugly converted-feet fractions like 3.048.
+
 ### Fixed
 - **Gridlines not starting where the data begins** — after fixing gridlines to clear the y-axis labels, they used a fixed pixel offset instead of tracking the actual left edge of the plotted data (Jan 1, which shifts when zoomed). Gridlines now start at `toSX(40)` — the data's real screen position — clamped to never run under the axis labels.
 - **Gridlines running behind y-axis labels** — dashed gridlines started at the chart's left edge (x=0), the same position as the overlaid y-axis numbers, so lines ran directly through the label text. Gridlines now start after the label column when the axis is shown.

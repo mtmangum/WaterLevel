@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Netlify CSV proxy function crashing (502)** — `lake-csv.js` used CommonJS `exports.handler` while `package.json` declares `"type": "module"`, so Node refused to load it, breaking all chart data on the deployed site. Converted to `export async function handler(event)`.
+
 ### Changed
 - **Mobile-responsive web layout** — removed the hard-coded 860px minimum width that forced horizontal scrolling on phones. Header now wraps into two rows under 640px (title/picker, then actions spaced edge-to-edge). Stat grid collapses from a 4-across row into a 2×2 grid. Annual Summary panel becomes a full-screen sheet with a visible close button (previously only closable via backdrop click, unreachable once full-screen) and its table scrolls horizontally instead of squeezing five columns unreadably narrow. Chart now handles touch events (tap for tooltip, drag for zoom) alongside the existing mouse handlers, with `touch-action: none` so gestures don't fight page scrolling.
 

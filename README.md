@@ -1,6 +1,6 @@
 # LakeLevel
 
-A native macOS app for monitoring real-time and historical water levels for all six LCRA Highland Lakes in Texas.
+A native macOS app for monitoring real-time and historical water levels for all six LCRA Highland Lakes in Texas. A React/Vite web port is also live at **[highlandlakelevels.org](https://highlandlakelevels.org)**.
 
 ![LakeLevel dark mode](screenshots/app-dark.png)
 
@@ -62,4 +62,42 @@ WaterLevel/
         ├── DashboardChartCard.swift    — 5-year overlay chart with crosshair + zoom
         └── Historical/
             └── HistoricalTableView.swift — live annual summary table
+```
+
+## Web app
+
+A React/Vite/TypeScript port of the same dashboard lives in `web/`, deployed to Netlify at [highlandlakelevels.org](https://highlandlakelevels.org). It mirrors the native app's feature set — lake picker, stat grid, 5-year overlay chart with crosshair/zoom/legend toggles, Annual Summary table — plus a mobile-responsive layout (stacking header/stat grid, touch-enabled chart, full-screen summary sheet under 640px) and shareable `?lake=` deep links.
+
+**Local development:**
+```
+cd web
+npm install
+npm run dev
+```
+
+**Data fetching:** a Netlify serverless function (`web/netlify/functions/lake-csv.js`) proxies CSV requests to waterdatafortexas.org to avoid CORS issues; the frontend calls it via the `/api/lake-csv` redirect defined in `web/netlify.toml`.
+
+**Deployment:** the Netlify site is linked to this GitHub repo (base directory `web`) — every push to `main` auto-builds and deploys. Manual deploys (`netlify deploy --prod` from `web/`) also work if needed.
+
+```
+web/
+├── index.html
+├── netlify.toml               — build config + /api/* redirect
+├── netlify/functions/
+│   └── lake-csv.js            — CORS proxy to waterdatafortexas.org
+├── public/
+│   └── favicon.svg
+└── src/
+    ├── App.tsx
+    ├── theme.ts                — COLORS + makeTheme(isDark)
+    ├── components/
+    │   ├── Header.tsx
+    │   ├── StatGrid.tsx
+    │   ├── DashboardChart.tsx
+    │   └── AnnualSummary.tsx
+    ├── hooks/
+    │   └── useAppState.ts      — lake selection, data fetching, derived stats
+    └── data/
+        ├── lakes.ts            — Lake definitions + coordinate helpers
+        └── lakeDataService.ts  — CSV fetch + parse
 ```

@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **cfs/cms conversion for the unit toggle** — INFLOW/OUTFLOW stat values and the "X cfs outbound" detail line now convert to cubic meters per second when the M unit is selected, matching the FT/M toggle instead of staying in cfs regardless of unit.
 - **Feet / meters unit toggle** — FT/M `SegmentedControl` in the header, next to DARK/LIGHT. All displayed levels (stat grid, chart y-axis, tooltips, Annual Summary table) convert from the source data's feet to meters and back; internal chart geometry stays in feet throughout, only display formatting changes. Gridline step sizes (0.5/1/2/5/10/20) are chosen in whichever unit is currently displayed, so meter mode gets its own nicely-rounded ticks instead of ugly converted-feet fractions like 3.048.
 
 ### Fixed

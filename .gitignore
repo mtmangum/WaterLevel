@@ -22,3 +22,6 @@ DerivedData/
 
 # Swift Package Manager
 .swiftpm/
+
+# Local Netlify folder
+.netlify

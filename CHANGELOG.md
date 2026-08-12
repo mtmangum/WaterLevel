@@ -8,10 +8,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Server-side data cache** — an hourly scheduled function (`sync-lake-data.js`) pre-fetches every lake's CSV from waterdatafortexas.org into a shared Netlify Blobs store, so `lake-csv.js` serves cached data in a few hundred ms instead of round-tripping to the upstream on every request; falls back to a live fetch + write-through on a cold miss.
+- **`dev` branch deploy environment** — pushes to `dev` build a separate preview at `dev--brilliant-churros-222631.netlify.app` with its own scoped Blobs cache (`lake-data-dev`), so testing never touches production data. Non-production builds also get a `noindex` meta tag and a blanket `robots.txt` so they're never crawled.
 - **cfs/cms conversion for the unit toggle** — INFLOW/OUTFLOW stat values and the "X cfs outbound" detail line now convert to cubic meters per second when the M unit is selected, matching the FT/M toggle instead of staying in cfs regardless of unit.
 - **Feet / meters unit toggle** — FT/M `SegmentedControl` in the header, next to DARK/LIGHT. All displayed levels (stat grid, chart y-axis, tooltips, Annual Summary table) convert from the source data's feet to meters and back; internal chart geometry stays in feet throughout, only display formatting changes. Gridline step sizes (0.5/1/2/5/10/20) are chosen in whichever unit is currently displayed, so meter mode gets its own nicely-rounded ticks instead of ugly converted-feet fractions like 3.048.
 
+### Changed
+- **Trimmed cached history to the last 31 years** — full-history CSVs go back to the 1940s for some lakes (~1.9MB), but the app only ever uses the last 30 years; the cache now trims to that window server-side, cutting payload to ~700KB raw (~174KB compressed).
+- **Dropped the redundant `-1year` fetch** — every consumer of the "recent" readings (latest reading, trend calcs, current-year chart line) only needed data already present in the trimmed historical set, so it's now derived client-side instead of a second network round-trip, halving per-lake requests.
+- **"SYNCED X AGO" reflects real data freshness** — now driven by the server's last successful fetch from origin instead of the browser's own request time, and re-renders every 30s so it counts up live instead of freezing between state changes.
+
 ### Fixed
+- **Blobs cache never actually being read** — `lake-csv.js` used the classic `handler(event)` function signature, which doesn't get Netlify Blobs runtime context auto-injected; every request silently fell back to a live origin fetch regardless of cache state. Converted to the V2 `export default` signature.
+- **Cache write-through silently never persisting** — the write to Blobs on a cold miss was fire-and-forget, so the function's runtime could terminate before it completed, leaving the cache permanently cold on that key. Now awaited.
 - **Gridlines not starting where the data begins** — after fixing gridlines to clear the y-axis labels, they used a fixed pixel offset instead of tracking the actual left edge of the plotted data (Jan 1, which shifts when zoomed). Gridlines now start at `toSX(40)` — the data's real screen position — clamped to never run under the axis labels.
 - **Gridlines running behind y-axis labels** — dashed gridlines started at the chart's left edge (x=0), the same position as the overlaid y-axis numbers, so lines ran directly through the label text. Gridlines now start after the label column when the axis is shown.
 

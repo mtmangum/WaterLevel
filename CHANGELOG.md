@@ -1,7 +1,9 @@
 # Changelog
 
-All notable changes to WaterLevel are documented here.
+All notable changes to the WaterLevel macOS app are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+The web app was split out to its own repo, [mtmangum/lakelevel](https://github.com/mtmangum/lakelevel), on 2026-08-13 (commit history preserved there). Web-app changes after that date are in that repo's CHANGELOG.md; entries below predating the split remain as the historical record.
 
 ---
 

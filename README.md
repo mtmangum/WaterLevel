@@ -2,8 +2,8 @@
 
 LakeLevel monitors real-time and historical water levels for all six LCRA Highland Lakes in Texas. It ships as two apps sharing one design and one data source:
 
-- **macOS app** — native SwiftUI, see [macOS App](#macos-app)
-- **Web app** — live at **[highlandlakelevels.org](https://highlandlakelevels.org)**, React/Vite/TypeScript, see [Web App](#web-app)
+- **macOS app** — native SwiftUI, see [macOS App](#macos-app) below
+- **Web app** — live at **[highlandlakelevels.org](https://highlandlakelevels.org)**, React/Vite/TypeScript, source at **[mtmangum/lakelevel](https://github.com/mtmangum/lakelevel)**
 
 ![LakeLevel dark mode](screenshots/app-dark.png)
 
@@ -71,45 +71,4 @@ WaterLevel/
 
 ## Web App
 
-Live at **[highlandlakelevels.org](https://highlandlakelevels.org)**, built with React/Vite/TypeScript in `web/`. It mirrors the native app's feature set — lake picker, stat grid, 5-year overlay chart with crosshair/zoom/legend toggles, Annual Summary table — plus a mobile-responsive layout (stacking header/stat grid, touch-enabled chart, full-screen summary sheet under 640px) and shareable `?lake=` deep links.
-
-### Local development
-
-```
-cd web
-npm install
-npm run dev
-```
-
-### Data fetching
-
-A Netlify serverless function (`web/netlify/functions/lake-csv.js`) proxies CSV requests to waterdatafortexas.org to avoid CORS issues; the frontend calls it via the `/api/lake-csv` redirect defined in `web/netlify.toml`.
-
-### Deployment
-
-The Netlify site is linked to this GitHub repo (base directory `web`) — every push to `main` auto-builds and deploys. Manual deploys (`netlify deploy --prod` from `web/`) also work if needed.
-
-### Project structure
-
-```
-web/
-├── index.html
-├── netlify.toml               — build config + /api/* redirect
-├── netlify/functions/
-│   └── lake-csv.js            — CORS proxy to waterdatafortexas.org
-├── public/
-│   └── favicon.svg
-└── src/
-    ├── App.tsx
-    ├── theme.ts                — COLORS + makeTheme(isDark)
-    ├── components/
-    │   ├── Header.tsx
-    │   ├── StatGrid.tsx
-    │   ├── DashboardChart.tsx
-    │   └── AnnualSummary.tsx
-    ├── hooks/
-    │   └── useAppState.ts      — lake selection, data fetching, derived stats
-    └── data/
-        ├── lakes.ts            — Lake definitions + coordinate helpers
-        └── lakeDataService.ts  — CSV fetch + parse
-```
+Moved to its own repo: **[mtmangum/lakelevel](https://github.com/mtmangum/lakelevel)** (split out 2026-08-13, commit history preserved). Live at [highlandlakelevels.org](https://highlandlakelevels.org).
